@@ -1,16 +1,16 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 20:40 UTC
+// Peak ESG — the client   ·   published 2026-11-04 20:49 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11042040';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11042040';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11042040';
-import { NEWS, newsFor } from './data/news.mjs?v=11042040';
-import { EPS, dossierAt } from './data/evolve.mjs?v=11042040';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11042040';
-import { makeNet } from './net.mjs?v=11042040';
+import * as M from './model/model.mjs?v=11042049';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11042049';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11042049';
+import { NEWS, newsFor } from './data/news.mjs?v=11042049';
+import { EPS, dossierAt } from './data/evolve.mjs?v=11042049';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11042049';
+import { makeNet } from './net.mjs?v=11042049';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -30,7 +30,7 @@ const S = {
   policy:{ strategy:null, excluded:[], rank:5, minScore:50 },
   policyText:'', fee:M.FEE_START,
   reviewYear:0, reviewTo:null,     // which year's review, and where it leads
-  holdings:{}, fund:null, lastResult:null, crisisLog:[],
+  holdings:{}, fund:null, lastResult:null, crisisLog:[], aiReview:null,
   openCo:null, openSect:'prof', flags:{}, trades:0,
   bot:[], botOpen:false, teamOpen:false, aside:null,
   ejected:{},                  // {uid: name} the manager has removed
@@ -1245,6 +1245,7 @@ function runSummary(){
     holdings: Object.entries(S.holdings || {}).map(([id, w]) => ({
       name: (co(id) || {}).name || id, industry: (co(id) || {}).industry || '', weight: w })),
     history: h, crises: log,
+    review: S.aiReview || null,
   };
 }
 // A file the team keeps. No server: the rows are built here and handed to the
@@ -1278,6 +1279,10 @@ function downloadCSV(){
     row('Scandals answered', s.answered),
     row('Money lost to the promise-portfolio gap (EUR m)', s.greenwashing.toFixed(2)),
     row('Policy statement', s.policyText),
+    '',
+    row('WHAT THE CHIEF OPERATING OFFICER MADE OF IT'),
+    row('What went well', s.review ? s.review.good : '(not written yet)'),
+    row('What would have made the difference', s.review ? s.review.improve : '(not written yet)'),
     '',
     row('FINAL PORTFOLIO'), row('Company', 'Industry', 'Weight'),
     ...s.holdings.map(h => row(h.name, h.industry, h.weight + 'x')),
@@ -1819,10 +1824,18 @@ SCREENS.final = {
             <span class="small">vs ${pc(y.market)}</span></span></div>`).join('')}
       </div>
 
+      <h2>What your Chief Operating Officer makes of it</h2>
+      ${S.aiReview ? `<div class="note good"><b>What went well.</b>
+          ${esc(S.aiReview.good || '')}</div>
+        <div class="note warn"><b>What would have made the difference.</b>
+          ${esc(S.aiReview.improve || '')}</div>`
+      : `<div class="note">Your Chief Operating Officer is still writing. It will appear here,
+          and it goes into the file.</div>`}
+
       <div class="actions" style="margin-top:22px">
         <button id="csv" class="wide">Save our result as a file</button></div>
       <p class="small" style="text-align:center">A spreadsheet of everything above, including
-        every year and every scandal, saved to this device.</p>`;
+        every year, every scandal and the assessment, saved to this device.</p>`;
   },
   wire(m){ const b = m.querySelector('#csv');
     if (b) b.onclick = () => { try { downloadCSV(); }
@@ -1864,6 +1877,7 @@ function connect(){
       botSay('Chief Operating Officer',
         `<b>${Hey()}I have read your policy.</b> ${esc(mine.aiPitch.note || 'It will do.')}`);
     }
+    if (mine.aiReview && !S.aiReview) { S.aiReview = mine.aiReview; save(); }
     if (mine.aiCrisis && S.aiCrisisYear !== mine.aiCrisis.year) {
       S.aiCrisisYear = mine.aiCrisis.year;
       if (S.fund) S.fund.crisisCredit = mine.aiCrisis.credit || 0;

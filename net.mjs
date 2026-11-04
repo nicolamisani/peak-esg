@@ -66,6 +66,7 @@ function fireNet(code) {
     fs.onSnapshot(fs.doc(db, 'sessions', code, 'groups', uid), d => {
       const v = d.data() || {};
       cache = { ...cache, mine: { aiPitch: v.aiPitch || null, aiCrisis: v.aiCrisis || null,
+                                  aiReview: v.aiReview || null,
                                   teamFlags: v.teamFlags || null, teamResult: v.teamResult || null,
                                   desk: v.desk || null, full: !!v.full,
                                   teamRoster: v.teamRoster || null,

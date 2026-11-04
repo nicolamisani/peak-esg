@@ -310,3 +310,9 @@ details.ex blockquote{margin:10px 0;padding:12px 15px;background:#fff;
 .plinth.me .nm{color:var(--green)}
 @media(max-width:520px){ .podiumwrap{gap:6px;min-height:205px} .plinth .nm{font-size:13px} }
 @media (prefers-reduced-motion:reduce){ .plinth{animation:none} }
+
+/* While a field has focus the soft keyboard owns the bottom of the screen.
+   The fixed bot strip would sit on top of it, so fold it away and let main
+   reclaim the padding that was reserved for it. */
+body.typing .botstrip{display:none}
+body.typing main{padding-bottom:20px}

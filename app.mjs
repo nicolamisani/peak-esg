@@ -1,16 +1,16 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 19:57 UTC
+// Peak ESG — the client   ·   published 2026-11-04 20:07 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11041957';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041957';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041957';
-import { NEWS, newsFor } from './data/news.mjs?v=11041957';
-import { EPS, dossierAt } from './data/evolve.mjs?v=11041957';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041957';
-import { makeNet } from './net.mjs?v=11041957';
+import * as M from './model/model.mjs?v=11042007';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11042007';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11042007';
+import { NEWS, newsFor } from './data/news.mjs?v=11042007';
+import { EPS, dossierAt } from './data/evolve.mjs?v=11042007';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11042007';
+import { makeNet } from './net.mjs?v=11042007';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -1837,5 +1837,24 @@ document.addEventListener('click', e => {
   const c = e.target.closest && e.target.closest('#crew');
   if (c && isMgr()) { S.teamOpen = true; paint(); }
 });
+// On a phone the soft keyboard takes half the screen, and iOS anchors a
+// position:fixed bar to the bottom of the shrunken viewport — so the bot strip
+// parks itself directly on top of the keyboard and steals another ~80px from
+// the little that is left. Writing a three-sentence policy through that gap is
+// the worst moment in the game on a phone. Fold the strip away while a field
+// has focus (nothing is lost: the whole history is one tap away afterwards),
+// and bring the field into view once the keyboard has finished animating.
+const typing = e => ['INPUT','TEXTAREA'].includes(e.target.tagName);
+document.addEventListener('focusin', e => {
+  if (!typing(e)) return;
+  document.body.classList.add('typing');
+  setTimeout(() => {
+    try { e.target.scrollIntoView({ block:'center', behavior:'smooth' }); } catch (_) {}
+  }, 320);
+});
+document.addEventListener('focusout', e => {
+  if (typing(e)) document.body.classList.remove('typing');
+});
+
 window.__peakBooted = true;              // the boot guard in index.html watches this
 window.PEAK = { S, M, go, advance, publishMe, SCREENS };  // for testing from the console

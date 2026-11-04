@@ -1,16 +1,16 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 20:12 UTC
+// Peak ESG — the client   ·   published 2026-11-04 20:18 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11042012';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11042012';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11042012';
-import { NEWS, newsFor } from './data/news.mjs?v=11042012';
-import { EPS, dossierAt } from './data/evolve.mjs?v=11042012';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11042012';
-import { makeNet } from './net.mjs?v=11042012';
+import * as M from './model/model.mjs?v=11042018';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11042018';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11042018';
+import { NEWS, newsFor } from './data/news.mjs?v=11042018';
+import { EPS, dossierAt } from './data/evolve.mjs?v=11042018';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11042018';
+import { makeNet } from './net.mjs?v=11042018';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -1163,7 +1163,7 @@ SCREENS.performance = {
           <p class="small" style="margin:10px 0 0">The fee is charged on the <b>average</b>, not
             on what you end with. A fund that shrinks still earns something on the way down.</p>
         </div>
-        ${flows.length ? `<details class="ex"><summary>Every reason, line by line</summary>
+        ${flows.length ? `<h2>The fund changes explained</h2>
           <div class="decomp">
             <div class="row"><span>Stock performance of your companies</span>
               <span class="amt ${shares >= 0 ? 'pos' : 'neg'}">${eur(shares)}</span></div>
@@ -1171,8 +1171,7 @@ SCREENS.performance = {
             ${flows.map(([k, v]) => `<div class="row"><span>${k}</span>
               <span class="amt ${v >= 0 ? 'pos' : 'neg'}">${eur(v)}</span></div>`).join('')}
             <div class="row tot"><span>The fund is now worth</span><span class="amt">${eur(d.end)}</span></div>
-          </div>
-        </details>` : ''}
+          </div>` : ''}
         <div class="decomp" style="margin-top:14px">
           <div class="row tot"><span>Fees earned so far</span><span class="amt">${eur(total)}</span></div>
         </div>`}`}

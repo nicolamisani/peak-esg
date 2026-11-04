@@ -1,15 +1,15 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 16:55 UTC
+// Peak ESG — the client   ·   published 2026-11-04 16:57 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11041655';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041655';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041655';
-import { NEWS, newsFor } from './data/news.mjs?v=11041655';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041655';
-import { makeNet } from './net.mjs?v=11041655';
+import * as M from './model/model.mjs?v=11041657';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041657';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041657';
+import { NEWS, newsFor } from './data/news.mjs?v=11041657';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041657';
+import { makeNet } from './net.mjs?v=11041657';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -533,8 +533,8 @@ SCREENS.desk = {
           <span class="score ${sc>=70?'hi':sc<50?'lo':''}">${sc}${
             d ? `<small>${d>0?'+':'−'}${Math.abs(d)}</small>` : ''}</span></div>`; }).join('')}
       <div class="note">Every company here is scored 0 to 100 by the same in-house rating team.
-        <b>Two of your four are not what their score suggests</b> — one is better than its score,
-        one is worse. Working out which is your job.</div>
+        <b>The score is one rater’s opinion, and not necessarily an accurate picture of
+        the business.</b> Whether it is, for these four, is what you are here to work out.</div>
       ${S.phase && S.phase !== 'setup' ? `<div class="actions">
         <button id="back" class="wide">Back to my recommendations</button></div>` : ''}`;
   },

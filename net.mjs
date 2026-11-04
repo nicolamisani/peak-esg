@@ -65,7 +65,8 @@ function fireNet(code) {
     // which the rules let only me read
     fs.onSnapshot(fs.doc(db, 'sessions', code, 'groups', uid), d => {
       const v = d.data() || {};
-      cache = { ...cache, mine: { aiPitch: v.aiPitch || null, aiCrisis: v.aiCrisis || null } };
+      cache = { ...cache, mine: { aiPitch: v.aiPitch || null, aiCrisis: v.aiCrisis || null,
+                                  teamFlags: v.teamFlags || null, teamResult: v.teamResult || null } };
       subs.forEach(f => f(cache)); });
     return fs;
   })();

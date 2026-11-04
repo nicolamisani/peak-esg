@@ -25,16 +25,18 @@ export const DRAG = { severe: 20, moderate: 6 };   // pts of return, in the even
 export const SEGMENTS = [
   { id:'conv', name:'Conviction',     share:0.25,
     base:[ +0.08, +0.03, +0.01,  0.00, +0.01, +0.09 ],
-    a:0.30, b:0.45, c:0.24, d:0.10, e:0.55, g:0.70, k:0.10 },
+    a:0.30, b:0.45, c:0.24, d:0.10, e:0.55, g:0.70, k:0.10, m:0.085 },
   { id:'main', name:'Mainstream ESG', share:0.50,
     base:[ +0.14, -0.05, -0.09, -0.07, -0.03, +0.15 ],
-    a:1.10, b:0.20, c:0.09, d:0.30, e:0.30, g:0.25, k:0.26 },
+    a:1.10, b:0.20, c:0.09, d:0.30, e:0.30, g:0.25, k:0.26, m:0.060 },
   { id:'retn', name:'Return-driven',  share:0.25,
     base:[ -0.02, +0.03, +0.04, +0.03, +0.02, +0.04 ],
-    a:1.60, b:0.00, c:0.00, d:0.50, e:0.12, g:0.00, k:0.30 }
+    a:1.60, b:0.00, c:0.00, d:0.50, e:0.12, g:0.00, k:0.30, m:0.035 }
 ];
 //  base   the market trend for that segment: mainstream money pours in during
 //         2022 and bleeds until it returns in 2027. That is the peak, mechanically.
+//  m      the prospectus: conviction money reads the story hardest, return-
+//         driven money barely at all
 //  a      performance, per point of excess return over the index
 //  b      the portfolio's ESG score, centred on 60
 //  c      policy strictness — conviction money will not buy a fund that
@@ -169,7 +171,7 @@ export function newFund({ policy = null, fee = FEE_START } = {}) {
   const aum = {};
   SEGMENTS.forEach(s => { aum[s.id] = START_AUM * s.share; });
   return { aum, fee, holdings:{}, policy, overclaim:0, feesEarned:0,
-           crisisCredit:0, years:[] };
+           crisisCredit:0, appeal:{ conv:0, main:0, retn:0 }, years:[] };
 }
 
 export const totalAUM = f => SEGMENTS.reduce((s, g) => s + f.aum[g.id], 0);
@@ -182,6 +184,15 @@ const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
  * halves the reputational damage at most; it never touches the market loss.
  */
 export function playYear(fund, t, { peerFee = FEE_START, ending = null } = {}) {
+  // What the prospectus bought. The AI scores the copy once, per segment, in
+  // -1..1; conviction money reads the story hardest and return-driven money
+  // barely at all. Without this term the pitch could only ever cost you — the
+  // over-claim feeds greenwashGap and nothing feeds the other way — which makes
+  // writing it well a decision with no upside, the same defect the fee had
+  // before it was made convex. It decays: year one is the launch, after that
+  // performance does the talking.
+  const A     = fund.appeal || { conv:0, main:0, retn:0 };
+  const decay = 1 / (1 + 0.8 * t);
   const last = t === YEARS.length - 1;
   const E    = (ending && last) ? ENDINGS[ending] : null;
   const r      = portfolioReturn(fund.holdings, t, ending);
@@ -220,7 +231,8 @@ export function playYear(fund, t, { peerFee = FEE_START, ending = null } = {}) {
       fee:    -s.d * feeGap,
       scandal:-s.e * expo,
       green:  -s.g * gap,
-      conc:   -s.k * conc
+      conc:   -s.k * conc,
+      pitch:   s.m * (A[s.id] || 0) * decay
     };
     const flow = clamp(Object.values(comp).reduce((x, y) => x + y, 0), -0.35, 0.45);
     const floor = START_AUM * s.share * AUM_FLOOR;
@@ -241,7 +253,7 @@ export function playYear(fund, t, { peerFee = FEE_START, ending = null } = {}) {
     flows: { base: euros('base'), performance: euros('perf'), esg: euros('esg'),
              policy: euros('policy'), fee: euros('fee'),
              scandal: euros('scandal'), greenwashing: euros('green'),
-             concentration: euros('conc') },
+             concentration: euros('conc'), pitch: euros('pitch') },
     flowTotal, feeTake, ret: r, retIndex: rIdx, esg, strictness: strict, gap, expo,
     effN
   };
@@ -260,9 +272,10 @@ export const runGame = (o = {}) => runUnderEnding(o, o.ending || 'authored');
 // ending is just a parameter, so every team can be re-scored under all four in
 // no time at the end.
 export function runUnderEnding({ holdings, policy, fee = FEE_START, overclaim = 0,
-                                 peerFee = FEE_START }, ending = 'authored') {
+                                 appeal = null, peerFee = FEE_START }, ending = 'authored') {
   let f = newFund({ policy, fee });
   f.holdings = holdings; f.overclaim = overclaim;
+  if (appeal) f.appeal = appeal;
   for (let t = 0; t < YEARS.length; t++) f = playYear(f, t, { peerFee, ending }).fund;
   return f;
 }

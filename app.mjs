@@ -1,5 +1,5 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 05:54 UTC
+// Peak ESG — the client   ·   published 2026-11-04 06:40 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
@@ -14,6 +14,7 @@ import { makeNet } from './net.mjs';
 // ------------------------------------------------------------------ state ---
 const S = {
   code:'', role:null, fundName:'', screen:'join', net:null,
+  teamId:null,                 // the manager's uid — what makes four devices a fund
   year:0, phase:'setup',
   policy:{ strategy:null, excluded:[], rank:5, minScore:50 },
   policyText:'', pitchText:'', fee:M.FEE_START,
@@ -31,7 +32,8 @@ function startClean(){
   Object.assign(S, JSON.parse(JSON.stringify(FRESH)));
 }
 const save = () => { try{ localStorage.setItem(KEY, JSON.stringify({
-  code:S.code, role:S.role, fundName:S.fundName, policy:S.policy, policyText:S.policyText,
+  code:S.code, role:S.role, fundName:S.fundName, teamId:S.teamId,
+  policy:S.policy, policyText:S.policyText,
   pitchText:S.pitchText, fee:S.fee, holdings:S.holdings, fund:S.fund, screen:S.screen,
   year:S.year, flags:S.flags, bot:S.bot })); }catch(e){} };
 const load = () => { try{ return JSON.parse(localStorage.getItem(KEY)) || null; }catch(e){ return null; } };
@@ -45,6 +47,7 @@ const pc  = (x,d=1) => (x>=0?'+':'−') + Math.abs(x).toFixed(d) + '%';
 const bp  = f => (f*10000).toFixed(0) + 'bp';
 const pct = f => (f*100).toFixed(2) + '%';
 const isMgr = () => S.role==='manager';
+const ord = n => n + (['th','st','nd','rd'][(n%100-n%10!=10)*(n%10<4)*n%10] || 'th');
 const co = id => M.byId(id);
 const myDesk = () => deskFor(S.role);
 
@@ -71,7 +74,9 @@ function stepLabel(){
   const m = { join:'joining', brief:'the brief', strategy:'step 1 of 4 · strategy',
     threshold:'step 2 of 4 · policy', fee:'step 3 of 4 · price',
     pitch:'step 4 of 4 · prospectus', wait:'waiting', desk:'your desk',
-    dossier:'your desk', allocate:'the portfolio' };
+    dossier:'your desk', allocate:'the portfolio',
+    team:'which fund?', teamfinal:'the result', final:'the result',
+    standby:'brief her', news:'the news', market:'the market' };
   return m[S.screen] || '';
 }
 
@@ -165,8 +170,19 @@ SCREENS.join = {
       S.role=c.dataset.r; paint(); });
     const fn=m.querySelector('#fname'); if(fn) fn.oninput=()=>{ S.fundName=fn.value; };
     m.querySelector('#go').onclick=()=>{
-      if (isMgr() && !S.fundName.trim()) S.fundName = 'Unnamed Fund';
-      connect(); go('brief');
+      if (isMgr()) {
+        // The manager IS the fund: her device creates the group document every
+        // analyst will then attach to, so she joins first and names it.
+        if (!S.fundName.trim()) S.fundName = 'Unnamed Fund';
+        S.teamId = 'me';
+        // Publish at once, not at the first decision: until her document exists
+        // the fund is not on the board, and her analysts have nothing to tap.
+        connect(); publishMe(); go('brief');
+      } else {
+        // An analyst has no fund yet. Connect, then let her pick it off the
+        // live board — no second code to read out, and no way to mistype it.
+        connect(); go('team');
+      }
     };
   }
 };
@@ -190,20 +206,59 @@ SCREENS.brief = {
   wire(m){ m.querySelector('#n').onclick=()=> go(isMgr()?'strategy':'desk'); }
 };
 
+// ------------------------------------------------------- which fund is mine --
+// Everything group-specific hangs off this: the fund's name, the flags reaching
+// the right manager, and the ending. The board is already public, so the
+// analyst taps a name instead of being told a second code.
+SCREENS.team = {
+  html(){
+    const funds = (S.board || []).filter(f => f.uid);
+    if (!funds.length) return `<h1>Which fund?</h1>
+      <p class="lede">Waiting for your fund manager to join and name the fund.</p>
+      <p class="task">She types the same four digits, chooses <b>Fund manager</b>, and names it.
+        It will appear here within a second or two.</p>
+      <div class="note">Nothing to do yet. Keep this screen open.</div>`;
+    return `<h1>Which fund?</h1>
+      <p class="task">Tap the fund your manager just named.</p>
+      <div class="choices" id="funds">
+        ${funds.map(f=>`<div class="choice${S.teamId===f.uid?' sel':''}" data-u="${esc(f.uid)}">
+          <div class="lbl">${esc(f.name)}</div></div>`).join('')}
+      </div>
+      <div class="note">If two funds share a name, check with her which is yours.</div>
+      <div class="actions"><button id="n" class="wide" ${S.teamId?'':'disabled'}>That's mine</button></div>`;
+  },
+  wire(m){
+    m.querySelectorAll('[data-u]').forEach(c=>c.onclick=()=>{
+      S.teamId = c.dataset.u;
+      S.fundName = (S.board||[]).find(f=>f.uid===S.teamId)?.name || '';
+      paint(); });
+    const n = m.querySelector('#n');
+    if (n) n.onclick = () => { publishMe(); go('brief'); };
+  }
+};
+
 // =============================================================================
 // ANALYST
 // =============================================================================
 SCREENS.desk = {
   html(){
     const ids = myDesk();
-    const yr = S.phase==='play' ? YEARS[S.year] : 2021;
+    const playing = S.phase==='play';
+    const yr = playing ? YEARS[S.year] : 2021;
     return `<h1>Your desk</h1>
       <p class="task">Tap a company to read it. The score is one agency's opinion, nothing more.</p>
       ${ids.map(id=>{ const c=co(id); const f=S.flags[id];
+        // The score moves with events, so showing the 2021 number all game
+        // would hide the one thing an analyst is meant to be watching.
+        const sc = playing ? c.esg[S.year] : c.esg0;
+        const d  = playing ? sc - c.esg0 : 0;
+        const r  = playing ? c.excess[S.year] + INDEX.ret[S.year] : null;
         return `<div class="co" data-id="${id}">
           <div><div class="nm">${esc(c.name)}${f?' <span class="flag">●</span>':''}</div>
-          <div class="ind">${esc(c.industry)} · ${esc(c.region)}</div></div>
-          <span class="score ${c.esg0>=70?'hi':c.esg0<50?'lo':''}">${c.esg0}</span></div>`; }).join('')}
+          <div class="ind">${esc(c.industry)} · ${esc(c.region)}${
+            r===null?'':` · <span class="${r>=0?'up':'down'}">${pc(r,0)} in ${yr}</span>`}</div></div>
+          <span class="score ${sc>=70?'hi':sc<50?'lo':''}">${sc}${
+            d ? `<small>${d>0?'+':'−'}${Math.abs(d)}</small>` : ''}</span></div>`; }).join('')}
       <div class="note">Every company here is rated by the same in-house analyst team, 0 to 100.
         Three of your four will turn out to be nothing like their score suggests.</div>`;
   },
@@ -531,12 +586,25 @@ SCREENS.crisiswait = {
 function resolveYear(){
   S.fund.holdings = S.holdings; S.fund.fee = S.fee;
   S.fund.policy = S.policy; S.fund.overclaim = S.overclaim || 0;
+  if (S.appeal) S.fund.appeal = S.appeal;
   // 2027 is the authored year — the war ends, oil falls, sentiment recovers.
   // It has to be applied in play, not only in the end-of-game comparison, or
   // the game never runs the scenario it argues from.
   const { fund, decomposition } = M.playYear(S.fund, S.year,
     { peerFee:S.peerFee, ending:'authored' });
   S.fund = fund; S.lastResult = decomposition;
+  // §7, severity crossover. A minor story stays with the specialist who owns
+  // the company; a big enough one is simply financial news and reaches the
+  // manager too — but only for companies she actually holds. That gives the
+  // intended asymmetry for free: the analyst saw the warning a year or two
+  // earlier as a 'watch', and the manager only ever sees the explosion.
+  const y = YEARS[S.year];
+  Object.keys(S.holdings).forEach(id => {
+    const n = newsFor(id, y);
+    if (n && n.w === 'major') botSay('Head of Distribution',
+      `<b>${esc(co(id).name)}.</b> ${esc(n.t)} — ${esc(n.s)}`);
+  });
+
   // the Head of Distribution reacts to what just happened
   const d = decomposition;
   if (d.flows.scandal < -8) botSay('Head of Distribution',
@@ -563,7 +631,9 @@ SCREENS.result = {
       ['Your fee against peers', d.flows.fee],
       ['Scandals in the book', d.flows.scandal],
       ['The gap between words and holdings', d.flows.greenwashing],
-      ['Concentration', d.flows.concentration]].filter(([,v])=>Math.abs(v)>0.05);
+      ['Concentration', d.flows.concentration],
+      ['What the prospectus promised', d.flows.pitch]].filter(([,v])=>Math.abs(v)>0.05);
+    const prev = S.esgPrev, moved = prev==null ? null : d.esg - prev;
     return `<h1>${d.year}</h1>
       <p class="task">Where the money went.</p>
       <div class="big ${up?'up':'down'}">${eur(d.end)}</div>
@@ -572,10 +642,44 @@ SCREENS.result = {
         <span class="amt ${v>=0?'pos':'neg'}">${eur(v)}</span></div>`).join('')}
         <div class="row tot"><span>Fees earned this year</span><span class="amt">${eur(d.feeTake)}</span></div></div>
       <div class="note info">Return ${pc(d.ret)} against the market at ${pc(d.retIndex)}.
-        Portfolio ESG score ${d.esg.toFixed(0)}.</div>
+        Portfolio ESG score <b>${d.esg.toFixed(0)}</b>${
+          moved===null ? '' : `, ${Math.abs(moved)<0.5 ? 'unchanged'
+            : (moved>0?'up':'down') + ' ' + Math.abs(moved).toFixed(0) + ' as your companies were re-rated'}`}.
+        You are not ranked on this — but everyone's is revealed at the end.</div>
       <div class="actions"><button id="n" class="wide">${S.year>=5?'See the result':'Waiting for the next year'}</button></div>`;
   },
-  wire(m){ m.querySelector('#n').onclick=()=>{ if(S.year>=5){ S.phase='done'; go('final'); } else go('wait'); }; }
+  wire(m){ m.querySelector('#n').onclick=()=>{
+    S.esgPrev = S.lastResult.esg;
+    if(S.year>=5){ S.phase='done'; go('final'); } else go('wait'); }; }
+};
+
+// --------------------------------------------------- the analyst's ending ---
+// Three quarters of the room used to get no ending at all: the manager played
+// through to the result and the analysts sat on "Tell her" until the laptop was
+// closed. This is their payoff, and the hook for the debrief.
+SCREENS.teamfinal = {
+  html(){
+    const r = S.teamResult;
+    if (!r) return `<h1>Five years on</h1>
+      <p class="lede">Waiting for your fund's result.</p>
+      <div class="note">It arrives here in a moment.</div>`;
+    const mine = myDesk().map(id => ({ c:co(id), w:(r.holdings||{})[id]||0, f:!!S.flags[id] }));
+    const held = mine.filter(x=>x.w);
+    return `<h1>${esc(r.name || 'Your fund')}</h1>
+      <div class="big">${eur(r.fees||0)}</div>
+      <div class="small">total fees earned${r.rank?` — ${ord(r.rank)} of ${r.of}`:''}</div>
+      <div class="note info"><b>Portfolio ESG score ${Math.round(r.esg||0)}.</b>
+        ${r.esgRank?`That is ${ord(r.esgRank)} of ${r.of} on sustainability, against ${ord(r.rank)} on fees.
+        Whether those two agree is the whole argument.`:''}</div>
+      <h2>Your four, and what she did with them</h2>
+      <div class="decomp">${mine.map(x=>`<div class="row">
+        <span>${esc(x.c.name)}${x.f?' <span class="flag">●</span>':''}</span>
+        <span class="amt">${x.w?`held ${x.w}×`:'not held'}</span></div>`).join('')}</div>
+      <div class="note">${
+        held.length===0 ? 'She held none of your four. Did she hear what you told her, or did you not push hard enough?'
+        : mine.some(x=>x.f && x.w) ? 'She bought something you had flagged. Was that your call or hers — and did you tell her why?'
+        : 'Nothing you flagged ended up in the book.'}</div>`;
+  }
 };
 
 SCREENS.wait = {
@@ -593,7 +697,8 @@ SCREENS.final = {
     // authored row would not match what the team actually earned. Instead take
     // the real total and apply the DIFFERENCE each alternative ending makes,
     // measured on a like-for-like replay. The authored row is then exact.
-    const base = { holdings:S.holdings, policy:S.policy, fee:S.fee, overclaim:S.overclaim||0 };
+    const base = { holdings:S.holdings, policy:S.policy, fee:S.fee,
+                   overclaim:S.overclaim||0, appeal:S.appeal||null };
     const ref  = M.runUnderEnding(base,'authored').feesEarned;
     const live = S.fund.feesEarned;
     const rows = Object.entries(ENDINGS).map(([k,e])=>({ k, e,
@@ -628,8 +733,15 @@ function connect(){
     S.countdownEnds = st.countdownEnds || null;
     // what the assessor made of the prose
     const mine = st.mine || {};
+    S.board = st.board || S.board || [];
     if (mine.aiPitch && !S.aiPitchSeen) {
       S.aiPitchSeen = true; S.overclaim = mine.aiPitch.overclaim || 0;
+      // The three appeal scores are what the prospectus actually bought. They
+      // were being computed and thrown away; the model now spends them.
+      S.appeal = { conv: mine.aiPitch.conviction  || 0,
+                   main: mine.aiPitch.mainstream  || 0,
+                   retn: mine.aiPitch.returnDriven || 0 };
+      if (S.fund) S.fund.appeal = S.appeal;
       botSay('Head of Distribution', esc(mine.aiPitch.note || 'Your prospectus has been read.'));
     }
     if (mine.aiCrisis && S.aiCrisisYear !== mine.aiCrisis.year) {
@@ -637,21 +749,30 @@ function connect(){
       if (S.fund) S.fund.crisisCredit = mine.aiCrisis.credit || 0;
       botSay('Head of Distribution', esc(mine.aiCrisis.note || 'Your statement has been read.'));
     }
-    // the analyst's view of flags is their own; the manager reads everyone's
-    if (isMgr()) {
-      const g = S.net.groups(); S.peerFlags = {};
-      Object.values(g).forEach(d=>{ if(d && d.flags) Object.assign(S.peerFlags, d.flags); });
-    }
-    if (yearChanged && st.stage==='play') {
+    // Her own analysts' flags, and only theirs. The worker matches them by team
+    // and writes them into her document, because the rules let a student read
+    // nobody else's. A flag is a bare dot — it says something here, never what,
+    // so she still has to ask. That is the point.
+    if (isMgr() && mine.teamFlags) S.peerFlags = mine.teamFlags;
+    // An analyst's fund result, written back the same way at the reveal.
+    if (!isMgr() && mine.teamResult) S.teamResult = mine.teamResult;
+    if (st.stage==='reveal' && S.screen!=='final' && S.screen!=='teamfinal' && S.screen!=='join') {
+      // The instructor ends the game. Before this the analysts had no ending at
+      // all — they sat on "Tell her" while the manager saw the result alone.
+      go(isMgr() ? 'final' : 'teamfinal');
+    } else if (yearChanged && st.stage==='play') {
       S.year = st.year; S.trades = 0;
       go(isMgr() ? 'market' : 'news');
-    } else if (S.screen!=='join') { save(); paint(); }
+    } else if (S.screen!=='join' && S.screen!=='team') { save(); paint(); }
+    else if (S.screen==='team') { paint(); }
   });
 }
 function publishMe(){
   if (!S.net) return;
   S.net.publish(S.role + '_' + (S.fundName||'g'), {
-    role:S.role, name:S.fundName, fee:S.fee, flags:S.flags,
+    role:S.role, name:S.fundName, teamId:S.teamId, fee:S.fee, flags:S.flags,
+    esg: S.fund ? M.portfolioESG(S.holdings, Math.min(5,S.year)) : null,
+    year: S.year,                 // the control panel reads readiness off this
     policy:S.policy, holdings:S.holdings,
     policyText:S.policyText, pitchText:S.pitchText,
     crisisText:S.crisisText||'', crisisYear:S.crisisYear||null,

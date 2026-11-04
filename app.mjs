@@ -1,15 +1,15 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 15:04 UTC
+// Peak ESG — the client   ·   published 2026-11-04 15:06 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11041504';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041504';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041504';
-import { NEWS, newsFor } from './data/news.mjs?v=11041504';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041504';
-import { makeNet } from './net.mjs?v=11041504';
+import * as M from './model/model.mjs?v=11041506';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041506';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041506';
+import { NEWS, newsFor } from './data/news.mjs?v=11041506';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041506';
+import { makeNet } from './net.mjs?v=11041506';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -114,7 +114,7 @@ function stepLabel(){
     dossier:'your desk', allocate:'the portfolio', open:'open for business',
     team:'which fund?', seat:'taking a seat', teamfinal:'the result', final:'the result',
     switch:'changing the policy', review:'the year in review',
-    performance:'how the money did',
+    performance:'how your fund did',
     standby:'brief the manager', news:'the news' };
   return m[S.screen] || '';
 }
@@ -767,7 +767,7 @@ SCREENS.open = {
 // companies on their desks part of a world rather than twelve index cards.
 SCREENS.review = {
   html(){ const y = YEARS[S.reviewYear] || YEARS[0]; const r = REVIEW[y] || { body:[] };
-    const on = 'How the money did';
+    const on = 'How my fund did';
     // Not escaped: the reviews are authored here and carry <b> on the figures
     // that matter, because a wall of plain prose is a wall nobody reads.
     return `<h1>${y} in review</h1>
@@ -787,6 +787,12 @@ const idxRet = t => (t === YEARS.length - 1 ? ENDINGS.authored.index : INDEX.ret
 const fundHoldings = () => isMgr() ? S.holdings : ((S.teamResult || {}).holdings || {});
 const isMyFund = f => (!isMgr() && S.teamId && f.uid === S.teamId)
                    || (!!f.name && f.name === S.fundName);
+// A company's in-house score in a given year, and the fund's weighted average.
+// t = -1 means the 2021 starting score, which is what year one is measured from.
+const scoreAt = (c, t) => t < 0 ? c.esg0 : c.esg[t];
+const fundEsgAt = (hold, t) => { const w = M.weightsOf(hold);
+  return Object.keys(hold).reduce((x, id) => x + w[id] * scoreAt(co(id), t), 0); };
+const delta = d => !d ? '' : `<small>${d > 0 ? '+' : '\u2212'}${Math.abs(d)}</small>`;
 
 SCREENS.performance = {
   html(){
@@ -800,18 +806,26 @@ SCREENS.performance = {
     const total = isMgr() ? (S.fund ? S.fund.feesEarned : 0) : (tr.fees || 0);
     const aum = isMgr() ? (S.lastResult ? S.lastResult.end : null)
                         : (tr.aum == null ? null : tr.aum);
-    const rows = UNIVERSE.map(c => ({ c, w: hold[c.id] || 0, r: M.ret(c, t, 'authored') }))
+    const rows = UNIVERSE.map(c => ({ c, w: hold[c.id] || 0, r: M.ret(c, t, 'authored'),
+                                      sc: scoreAt(c, t), d: scoreAt(c, t) - scoreAt(c, t - 1) }))
                          .sort((a, b) => b.r - a.r);
     const owned = rows.filter(x => x.w), rest = rows.filter(x => !x.w);
     const line = x => `<div class="co${x.w ? ' held' : ''}">
       <div><div class="nm">${esc(x.c.name)}</div>
         <div class="ind">${esc(x.c.industry)}${
           x.w ? ` · ${isMgr() ? 'you held' : 'the fund held'} ${x.w}×` : ''}</div></div>
-      <span class="ret ${x.r >= idx ? 'up' : 'down'}" style="margin-left:auto">${pc(x.r, 0)}</span></div>`;
+      <span class="score ${x.sc>=70?'hi':x.sc<50?'lo':''}" style="margin-left:auto"
+        title="ESG score">${x.sc}${delta(x.d)}</span>
+      <span class="ret ${x.r >= idx ? 'up' : 'down'}">${pc(x.r, 0)}</span></div>`;
+    // The fund's own score, and how far its companies were re-rated this year.
+    const esgNow = Object.keys(hold).length ? fundEsgAt(hold, t) : null;
+    const esgWas = Object.keys(hold).length ? fundEsgAt(hold, t - 1) : null;
+    const esgMove = esgNow === null ? 0 : Math.round(esgNow) - Math.round(esgWas);
     const board = (S.board || []).slice().sort((a, b) => (b.fees || 0) - (a.fees || 0));
     const best = rest.length ? rest[0] : null;
-    return `<h1>${y}: how the money did</h1>
-      <p class="task">Your fund against the market, and every company in the universe.</p>
+    return `<h1>${y}: how your fund did</h1>
+      <p class="task">Your fund against the market, and every company in the universe.
+        The number in the grey box is the company's ESG score, and how far it moved this year.</p>
       ${r === null ? `<div class="note">Waiting for your fund's numbers.</div>` : `
         <div class="big ${r >= idx ? 'up' : 'down'}">${pc(r)}</div>
         <div class="small">your fund's return in ${y} — the market returned ${pc(idx)}</div>
@@ -820,6 +834,13 @@ SCREENS.performance = {
           ${feeYear === null ? '' : `<div class="row"><span>Fees earned in ${y}</span><span class="amt">${eur(feeYear)}</span></div>`}
           <div class="row tot"><span>Fees earned so far</span><span class="amt">${eur(total)}</span></div>
         </div>`}
+      ${esgNow === null ? '' : `<div class="note info">
+        <b>The fund's ESG score is ${esgNow.toFixed(0)} out of 100</b>${
+          esgMove === 0 ? ', unchanged this year'
+            : `, ${esgMove > 0 ? 'up' : 'down'} ${Math.abs(esgMove)} from ${esgWas.toFixed(0)}`}.
+        It moves on its own, without anybody trading: the rating team re-scores every company
+        each year, and the fund's number is the average of its holdings' scores weighted by
+        how much of each it owns.</div>`}
       <h2>What the fund owned</h2>
       ${owned.length ? owned.map(line).join('') : `<div class="note">Nothing.</div>`}
       <h2>What it did not own</h2>
@@ -828,6 +849,9 @@ SCREENS.performance = {
       ${best && owned.length && best.r > owned[0].r ? `<div class="note info">
         The best company in the universe this year was one the fund did not own:
         <b>${esc(best.c.name)}</b>, ${pc(best.r, 0)}.</div>` : ''}
+      <div class="note">${isMgr()
+        ? 'Before you decide anything, ask your analysts what changed on their desks this year — a score that moved, a story that broke, a policy that was quietly dropped. The news reaches them and not you.'
+        : 'Go back through your companies before the manager decides. The scores have moved and there is new press. Whatever you do not say out loud does not reach them.'}</div>
       ${board.length ? `<h2>Every fund in the room</h2>
         <div class="decomp">${board.map((f, i) => `<div class="row${isMyFund(f) ? ' tot' : ''}">
           <span>${i + 1}. ${esc(f.name || 'Unnamed')}${isMyFund(f) ? ' — yours' : ''}</span>

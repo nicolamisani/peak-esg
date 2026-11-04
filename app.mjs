@@ -1,15 +1,15 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 17:09 UTC
+// Peak ESG — the client   ·   published 2026-11-04 17:16 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11041709';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041709';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041709';
-import { NEWS, newsFor } from './data/news.mjs?v=11041709';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041709';
-import { makeNet } from './net.mjs?v=11041709';
+import * as M from './model/model.mjs?v=11041716';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041716';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041716';
+import { NEWS, newsFor } from './data/news.mjs?v=11041716';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041716';
+import { makeNet } from './net.mjs?v=11041716';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -45,7 +45,7 @@ function startClean(){
 const save = () => { try{ localStorage.setItem(KEY, JSON.stringify({
   code:S.code, role:S.role, fundName:S.fundName, teamId:S.teamId, who:S.who,
   policy:S.policy, policyText:S.policyText, ejected:S.ejected,
-  resolvedYear:S.resolvedYear, readyYear:S.readyYear,
+  resolvedYear:S.resolvedYear, readyYear:S.readyYear, crisis:S.crisis,
   fee:S.fee, holdings:S.holdings, fund:S.fund, screen:S.screen,
   year:S.year, flags:S.flags, bot:S.bot })); }catch(e){} };
 const load = () => { try{ return JSON.parse(localStorage.getItem(KEY)) || null; }catch(e){ return null; } };
@@ -339,7 +339,7 @@ SCREENS.intro = {
     <div class="title" aria-hidden="true">
       <div class="titlemark">${MARK}</div>
       <div class="titlename">Peak <span>ESG</span></div>
-      <div class="titlesub">Six years, twelve companies, one fund \u00b7 2022\u20132027</div>
+      <div class="titlesub">Running an ESG fund from 2022 to 2027</div>
     </div>
     <p class="lede">${esc(SCENARIO)}</p>
     <h2>How it works</h2>
@@ -1325,7 +1325,11 @@ function severeHit(){
 }
 
 SCREENS.crisis = {
-  html(){ const { c, ev, weight } = S.crisis;
+  html(){
+    if (!S.crisis) return `<h1>Nothing to answer for</h1>
+      <p class="lede">There is no scandal in the portfolio to respond to.</p>
+      <div class="actions"><button id="on" class="wide">Carry on</button></div>`;
+    const { c, ev, weight } = S.crisis;
     const outside = !M.admits(S.policy, c);
     return `<h1>A scandal in your portfolio</h1>
       <p class="task">${esc(c.name)} is ${(weight*100).toFixed(0)}% of the fund. Investors will
@@ -1341,6 +1345,9 @@ SCREENS.crisis = {
         <button id="n" class="wide">Issue the statement</button>
         <button class="ghost" id="skip">Say nothing</button></div>`; },
   wire(m){
+    const on=m.querySelector('#on');
+    if (on) { on.onclick=()=>{ if(isMgr() && S.fund && S.resolvedYear!==S.year) resolveYear();
+                               S.reviewYear=S.year; S.reviewTo=null; go('review'); }; return; }
     const t=m.querySelector('#t'); t.oninput=()=>{S.crisisText=t.value;};
     const send = (text)=>{ const { c, ev, weight } = S.crisis;
       S.crisisText=text; S.crisisYear=YEARS[S.year]; S.crisisEvent=ev.note;
@@ -1465,6 +1472,10 @@ SCREENS.wait = {
 
 SCREENS.final = {
   html(){
+    if (!S.fund) return `<h1>Five years on</h1>
+      <p class="lede">This fund never opened, so there is nothing to report.</p>
+      <div class="note">If that is wrong, your device may have lost its game. Nothing can be
+        recovered now \u2014 but your fund\u2019s result is on the screen at the front of the room.</div>`;
     // The live game already happened, crisis responses and all. Re-running it
     // from scratch under another ending would also discard those, so the
     // authored row would not match what the team actually earned. Instead take
@@ -1661,4 +1672,4 @@ document.addEventListener('click', e => {
   if (c && isMgr()) { S.teamOpen = true; paint(); }
 });
 window.__peakBooted = true;              // the boot guard in index.html watches this
-window.PEAK = { S, M, go, advance, publishMe };  // for testing from the console
+window.PEAK = { S, M, go, advance, publishMe, SCREENS };  // for testing from the console

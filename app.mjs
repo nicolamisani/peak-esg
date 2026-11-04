@@ -1,15 +1,15 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 07:07 UTC
+// Peak ESG — the client   ·   published 2026-11-04 12:07 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11040707';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11040707';
-import { INDEX, YEARS, MACRO, SCENARIO, ENDINGS } from './data/world.mjs?v=11040707';
-import { NEWS, newsFor } from './data/news.mjs?v=11040707';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11040707';
-import { makeNet } from './net.mjs?v=11040707';
+import * as M from './model/model.mjs?v=11041207';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041207';
+import { INDEX, YEARS, MACRO, SCENARIO, ENDINGS } from './data/world.mjs?v=11041207';
+import { NEWS, newsFor } from './data/news.mjs?v=11041207';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041207';
+import { makeNet } from './net.mjs?v=11041207';
 
 // ------------------------------------------------------------------ state ---
 const S = {

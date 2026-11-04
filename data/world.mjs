@@ -13,7 +13,7 @@ export const YEARS = [2022, 2023, 2024, 2025, 2026, 2027];
 
 export const INDEX = {
   //        2022   2023   2024   2025   2026   2027
-  ret:    [ -18,   +22,   +17,   +12,    +8,   +10 ],
+  ret: [ -13, +20, +27,  +7, +14, +10 ],
   conf:   ['h',   'h',   'h',   'm',   'l',   'n/a'],
 };
 
@@ -66,7 +66,7 @@ export const MACRO = {
 export const ENDINGS = {
   authored: { label: 'The war ends, oil falls, sentiment recovers',
     index:+22, esgTilt:1.8, mainBase:+0.26,
-    adj:{ DEF:-34, OIL:-26, MIN:-6, TOB:-8, UTI:+26, SEM:+18, AUT:+12, FOOD:+8, APP:+6 } },
+    adj:{ DEF:-24, OIL:-22, MIN:-6, TOB:-10, UTI:+12, SEM:+16, AUT:+14, FOOD:+12, APP:+14, PHA:+6, SFT:+8 } },
   grind:    { label: 'The war grinds on',
     index:-4,  esgTilt:0.7, mainBase:-0.04,
     adj:{ DEF:+34, OIL:+22, MIN:+14, BNK:+4, UTI:-12, SEM:-14, AUT:-10, APP:-12, SFT:-8 } },

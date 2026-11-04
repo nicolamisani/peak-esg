@@ -1,15 +1,15 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 14:45 UTC
+// Peak ESG — the client   ·   published 2026-11-04 14:46 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11041445';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041445';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041445';
-import { NEWS, newsFor } from './data/news.mjs?v=11041445';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041445';
-import { makeNet } from './net.mjs?v=11041445';
+import * as M from './model/model.mjs?v=11041446';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041446';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041446';
+import { NEWS, newsFor } from './data/news.mjs?v=11041446';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041446';
+import { makeNet } from './net.mjs?v=11041446';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -717,9 +717,11 @@ SCREENS.open = {
 SCREENS.review = {
   html(){ const y = YEARS[S.reviewYear] || YEARS[0]; const r = REVIEW[y] || { body:[] };
     const on = 'How the money did';
+    // Not escaped: the reviews are authored here and carry <b> on the figures
+    // that matter, because a wall of plain prose is a wall nobody reads.
     return `<h1>${y} in review</h1>
-      <p class="task">${esc(r.strap || '')}</p>
-      <div class="sect review">${(r.body||[]).map(x=>`<p>${esc(x)}</p>`).join('')}</div>
+      <p class="task">${r.strap || ''}</p>
+      <div class="sect review">${(r.body||[]).map(x=>`<p>${x}</p>`).join('')}</div>
       <div class="small" style="margin-top:12px">Peak Research · global equity strategy</div>
       <div class="actions"><button id="n" class="wide">${esc(on)}</button></div>`; },
   wire(m){ m.querySelector('#n').onclick=()=>go('performance'); }

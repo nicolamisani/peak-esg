@@ -1,0 +1,257 @@
+// =============================================================================
+// Peak ESG — the twelve companies
+// =============================================================================
+// Twelve industries, one company each. Names and descriptions are fictional.
+// Each is matched to a real industry cousin which supplies the SHAPE of the
+// annual returns; magnitudes are compressed (see world.mjs COMPRESSION).
+//
+//   visible   everything a student can read in the dossier on day one
+//   hidden    excess returns, score path, events, the apple classification
+//
+// The apple classification is ESG quality x how legible the flags are, three
+// each. It is deliberately NOT predictable from the industry: screening by
+// activity catches tobacco, oil, defence and the bank, but wrongly excludes
+// mining, food and pharma, which are three of the six good companies. The
+// worst-behaved company on the board (apparel) carries no screenable activity
+// at all, so only reading finds it.
+//
+// CONFIDENCE on excess paths: [m] shape I am reasonably sure of, [l] estimated.
+// Every one needs checking against real data before the game is taught.
+
+export const ACTIVITIES = {
+  tobacco:            'Tobacco',
+  weapons:            'Weapons and defence',
+  fossilExtraction:   'Fossil fuel extraction',
+  fossilFinancing:    'Fossil fuel financing',
+  thermalCoal:        'Thermal coal',
+  palmOil:            'Palm oil',
+  animalTesting:      'Animal testing'
+};
+
+export const UNIVERSE = [
+
+// ---------------------------------------------------------------- DEFENCE ---
+{ id:'DEF', name:'Hartline Systems', industry:'Defence', region:'Europe',
+  blurb:'Air defence, naval electronics and guided systems for European states.',
+  cousin:'Thales', apple:'bad-hidden', conf:'m',
+  esg0:58, rank:'3rd of 24', pe:16.8, chart:[100,104,112], chart3y:'+12%',
+  activities:['weapons'],
+  policies:{ transition:'Yes, 2040 net zero, interim targets to 2030',
+             humanRights:'Yes, group-wide, includes export controls',
+             scope3:'Partial — categories 1 and 11 only',
+             supplierAudit:'Yes, tier 1; tier 2 not mapped' },
+  ngo:['No active campaign.','Excluded by 3 of 5 large European ESG fund screens on weapons grounds.'],
+  governance:{ chair:'Independent', ceoChange:'None since 2018', holder:'State holding 25.7%' },
+  subsidiaries:['Hartline Marine','Hartline Precision Guidance (Slovakia)','Hartline Space'],
+  // war begins 2022, orders compound, peace in 2027
+  excess:[ +55, +30,  +5, +40, +20, -35 ],
+  esg:   [  58,  56,  55,  57,  58,  54 ],
+  events:[{ year:2026, sev:'severe', norm:true,
+            note:'An NGO report names Hartline Precision Guidance as a supplier of guidance components for cluster munitions.',
+            signals:['The subsidiary is listed in the Financial tab and the category is treaty-banned.',
+                     'The 2021 trade-press line flags guided munitions specifically, not general defence.'] }] },
+
+// ---------------------------------------------------------------- TOBACCO ---
+{ id:'TOB', name:'Brightleaf Group', industry:'Tobacco', region:'Europe',
+  blurb:'Cigarettes and next-generation nicotine products in 120 markets.',
+  cousin:'BAT / Imperial Brands', apple:'bad-obvious', conf:'m',
+  esg0:68, rank:'1st of 11', pe:9.2, chart:[100,92,101], chart3y:'+1%',
+  activities:['tobacco'],
+  policies:{ transition:'Yes, 2030 operational net zero',
+             humanRights:'Yes, group-wide, leaf supply chain included',
+             scope3:'Yes, full inventory',
+             supplierAudit:'Yes, tier 1 and tier 2' },
+  ngo:['No active campaign on conduct.','Permanently excluded by most value-based screens on product grounds.'],
+  governance:{ chair:'Independent', ceoChange:'None since 2019', holder:'Widely held' },
+  // defensive in 2022, impairment in 2023, steady after
+  excess:[ +30, -15, +15, +20,  +5, -10 ],
+  esg:   [  68,  69,  70,  70,  71,  70 ],
+  events:[] },
+
+// ------------------------------------------------------------- OIL AND GAS ---
+{ id:'OIL', name:'Calder Energy', industry:'Oil and gas', region:'Europe',
+  blurb:'Integrated oil and gas with a stated pivot to low-carbon energy.',
+  cousin:'BP', apple:'bad-obvious', conf:'m',
+  esg0:54, rank:'4th of 31', pe:11.4, chart:[100,61,84], chart3y:'−16%',
+  activities:['fossilExtraction'],
+  policies:{ transition:'Yes — 40% production cut by 2030 announced in 2020',
+             humanRights:'Yes, group-wide',
+             scope3:'Yes, categories 1 and 11',
+             supplierAudit:'Yes, tier 1' },
+  ngo:['Two active climate campaigns.','Named in shareholder resolutions on transition credibility in 2021.'],
+  governance:{ chair:'Independent', ceoChange:'New CEO 2020', holder:'Widely held' },
+  excess:[ +60,   0, -20, -10,   0, -20 ],
+  esg:   [  54,  52,  44,  40,  39,  38 ],
+  events:[{ year:2024, sev:'severe', norm:false,
+            note:'Calder abandons its 2030 production-cut target and raises upstream investment.',
+            signals:['The transition plan was announced in 2020 with no interim milestones before 2030.',
+                     'Capital expenditure in the 2021 accounts was already rising against the stated plan.'] }] },
+
+// ---------------------------------------------------------------- UTILITY ---
+{ id:'UTI', name:'Verenda Power', industry:'Utilities', region:'Europe',
+  blurb:'Regulated networks and 24 GW of wind and solar generation.',
+  cousin:'Iberdrola', apple:'good-obvious', conf:'m',
+  esg0:81, rank:'2nd of 44', pe:17.9, chart:[100,131,148], chart3y:'+48%',
+  activities:[],
+  policies:{ transition:'Yes, 1.5°C aligned, validated interim targets',
+             humanRights:'Yes, group-wide, includes communities',
+             scope3:'Yes, full inventory',
+             supplierAudit:'Yes, tier 1 and tier 2' },
+  ngo:['No active campaign.','Cited approvingly in two NGO transition rankings.'],
+  governance:{ chair:'Independent', ceoChange:'None since 2015', holder:'Widely held' },
+  // long duration: crushed by rates 2022-23, recovers with the 2027 scenario
+  excess:[  +5, -18,  -8,  +5,  +8, +30 ],
+  esg:   [  81,  82,  82,  83,  83,  85 ],
+  events:[] },
+
+// ---------------------------------------------------------------- BANKING ---
+{ id:'BNK', name:'Meridian Banque', industry:'Banking', region:'Europe',
+  blurb:'Universal bank: retail, corporate lending and project finance.',
+  cousin:'BNP Paribas', apple:'bad-hidden', conf:'m',
+  esg0:72, rank:'5th of 58', pe:7.8, chart:[100,86,109], chart3y:'+9%',
+  activities:['fossilFinancing'],
+  policies:{ transition:'Yes — own operations only',
+             humanRights:'Yes, group-wide',
+             scope3:'No financed-emissions disclosure',
+             supplierAudit:'Yes, tier 1' },
+  ngo:['One active campaign on fossil project finance.','Ranked 7th largest lender to new oil and gas in an NGO tally.'],
+  governance:{ chair:'Independent', ceoChange:'None since 2017', holder:'Widely held' },
+  // rate rises are good for banks
+  excess:[ +15,  +8,  +8, +15, +10,   0 ],
+  esg:   [  72,  70,  66,  62,  60,  58 ],
+  events:[{ year:2025, sev:'severe', norm:false,
+            note:'A coalition of NGOs publishes Meridian’s financed emissions. They are forty times its operational footprint.',
+            signals:['The transition plan covers own operations only — stated plainly in the policy tab.',
+                     'No financed-emissions disclosure, in a sector where that is the only number that matters.'] }] },
+
+// ----------------------------------------------------------------- MINING ---
+{ id:'MIN', name:'Korsgaard Minerals', industry:'Mining', region:'Americas',
+  blurb:'Copper, nickel and cobalt, with a legacy thermal coal division in run-off.',
+  cousin:'Glencore (transition case)', apple:'good-hidden', conf:'l',
+  esg0:38, rank:'19th of 36', pe:6.9, chart:[100,118,147], chart3y:'+47%',
+  activities:['thermalCoal'],
+  policies:{ transition:'Yes — coal division in managed run-off, closure by 2031',
+             humanRights:'Yes, group-wide, with community grievance mechanism',
+             scope3:'Yes, full inventory including sold product',
+             supplierAudit:'Yes, plus third-party audit of all artisanal sources' },
+  ngo:['One legacy campaign on the coal division, paused in 2021 after the closure commitment.',
+       'Named as a preferred supplier in two battery-supply-chain assessments.'],
+  governance:{ chair:'Independent', ceoChange:'New CEO 2021, from the metals division', holder:'Widely held' },
+  // commodity spike then normalisation
+  excess:[ +45, -15, -18,  +5, +15, +10 ],
+  esg:   [  38,  44,  50,  55,  58,  62 ],
+  events:[] },
+// ------------------------------------------------------------------ AUTOS ---
+{ id:'AUT', name:'Sakata Motor', industry:'Autos', region:'Asia-Pacific',
+  blurb:'Mass-market vehicles. Hybrid-led electrification, 3% battery-electric.',
+  cousin:'Toyota', apple:'good-hidden', conf:'m',
+  esg0:49, rank:'14th of 29', pe:10.1, chart:[100,109,121], chart3y:'+21%',
+  activities:[],
+  policies:{ transition:'Yes, 2050 net zero; criticised as unambitious on battery-electric',
+             humanRights:'Yes, group-wide, includes raw material sourcing',
+             scope3:'Yes, full inventory including use of sold products',
+             supplierAudit:'Yes, tier 1 and tier 2' },
+  ngo:['Two active campaigns on lobbying against battery-electric mandates.',
+       'Ranked last of eight majors on electrification ambition by one NGO scorecard.',
+       'Fleet-average emissions are the lowest of the eight on the same scorecard.'],
+  governance:{ chair:'Non-independent, founding family', ceoChange:'None since 2016', holder:'Founding family 9.1%' },
+  excess:[   0, +20, -15,   0,  +5, +10 ],
+  esg:   [  49,  50,  54,  58,  61,  66 ],
+  events:[{ year:2023, sev:'moderate', norm:false,
+            note:'A recall of 1.2 million vehicles for a fuel-pump fault. Handled quickly, no injuries.',
+            signals:['Not foreshadowed. Ordinary industrial noise — not every bad headline is a scandal.'] }] },
+
+// --------------------------------------------------------- SEMICONDUCTORS ---
+{ id:'SEM', name:'Nordlys Microsystems', industry:'Semiconductors', region:'Europe',
+  blurb:'Power semiconductors for electric vehicles, solar inverters and grid.',
+  cousin:'STMicroelectronics', apple:'bad-hidden', conf:'m',
+  esg0:77, rank:'2nd of 33', pe:21.6, chart:[100,128,166], chart3y:'+66%',
+  activities:[],
+  policies:{ transition:'Yes, 2027 carbon neutral on scopes 1 and 2',
+             humanRights:'Yes — own operations only',
+             scope3:'Partial — category 1 only',
+             supplierAudit:'Yes, tier 1; chemical suppliers excluded from scope' },
+  ngo:['No active campaign.','Cited as a transition enabler in three sell-side sustainability notes.'],
+  governance:{ chair:'Independent', ceoChange:'None since 2018', holder:'State holdings 13.8%' },
+  water:'Three of five fabs sit in basins classified as high or extremely high water stress.',
+  excess:[  +5, +15, -45, -20,  +5, +15 ],
+  esg:   [  77,  76,  74,  64,  60,  61 ],
+  events:[{ year:2025, sev:'severe', norm:false,
+            note:'Regulators find persistent fluorinated-compound discharge at two fabs. Remediation order and a halt to one line.',
+            signals:['Chemical suppliers are explicitly excluded from the audit scope — stated in the policy tab.',
+                     'Three of five fabs are in high water-stress basins, disclosed in the dossier.'] }] },
+
+// --------------------------------------------------------------- SOFTWARE ---
+{ id:'SFT', name:'Cloudline', industry:'Software', region:'Americas',
+  blurb:'Enterprise customer software, sold per seat. Building AI agents into the suite.',
+  cousin:'Salesforce', apple:'good-obvious', conf:'m',
+  esg0:79, rank:'4th of 61', pe:38.2, chart:[100,142,174], chart3y:'+74%',
+  activities:[],
+  policies:{ transition:'Yes, net zero achieved on scopes 1 and 2, 2040 for scope 3',
+             humanRights:'Yes, group-wide',
+             scope3:'Yes, full inventory',
+             supplierAudit:'Yes, tier 1 and tier 2' },
+  ngo:['No active campaign.'],
+  governance:{ chair:'Combined CEO and chair', ceoChange:'Founder-led', holder:'Founder 3.2%' },
+  excess:[ -30, +75, +10, -25, -10, +15 ],
+  esg:   [  79,  78,  79,  77,  76,  78 ],
+  events:[] },
+
+// ---------------------------------------------------------------- APPAREL ---
+{ id:'APP', name:'Lumenwear', industry:'Apparel', region:'Europe',
+  blurb:'Fast fashion. 1,240 tier-one suppliers across fourteen countries.',
+  cousin:'H&M', apple:'bad-obvious', conf:'m',
+  esg0:76, rank:'1st of 47', pe:19.3, chart:[100,96,131], chart3y:'+31%',
+  activities:[],
+  policies:{ transition:'Yes, 2040 net zero',
+             humanRights:'Yes — covers tier 1 suppliers',
+             scope3:'Yes, full inventory',
+             supplierAudit:'Yes, tier 1. Tier 2 mapping "in progress".' },
+  ngo:['No active campaign.','Signatory, UN Global Compact. Named Disclosure Leader of the Year 2021.',
+       'A consumer group has filed a complaint about the sustainability claims on one product line.'],
+  governance:{ chair:'Independent', ceoChange:'None since 2015', holder:'Founding family 38%' },
+  media2021:'"Labour inspectors denied access at two mills" — regional paper, November 2021.',
+  excess:[ -15, +15, -10,  -5,   0, +15 ],
+  esg:   [  76,  58,  54,  56,  58,  60 ],
+  events:[{ year:2023, sev:'severe', norm:true,
+            note:'Forced labour documented at a tier-two supplier. The company says it had no visibility of the tier.',
+            signals:['Tier-two mapping is openly "in progress" — the company says it cannot see the tier where the problem is.',
+                     'The November 2021 regional-paper line about inspectors being denied access.'] }] },
+
+// ----------------------------------------------------------- FOOD AND BEV ---
+{ id:'FOOD', name:'Marchetti Foods', industry:'Food and beverage', region:'Europe',
+  blurb:'Packaged food and beverages. Palm oil in roughly 9% of lines.',
+  cousin:'Nestl\u00e9 (transition case)', apple:'good-hidden', conf:'l',
+  esg0:61, rank:'11th of 52', pe:18.7, chart:[100,107,113], chart3y:'+13%',
+  activities:['palmOil'],
+  policies:{ transition:'Yes, 1.5\u00b0C aligned with validated interim targets',
+             humanRights:'Yes, group-wide, to plantation level',
+             scope3:'Yes, full inventory including agriculture',
+             supplierAudit:'Yes, plus satellite monitoring of all palm concessions' },
+  ngo:['One historic deforestation campaign, closed in 2020 after full traceability was verified.',
+       '100% of palm volume certified and traceable to mill since 2020, confirmed by two monitors.'],
+  governance:{ chair:'Independent', ceoChange:'None since 2019', holder:'Widely held' },
+  excess:[ +10, -10, -20, -15,  -5, +10 ],
+  esg:   [  61,  63,  66,  68,  70,  73 ],
+  events:[] },
+
+// ---------------------------------------------------------------- PHARMA ---
+{ id:'PHA', name:'Avenir Health', industry:'Pharmaceuticals', region:'Europe',
+  blurb:'Generics and vaccines, with tiered pricing in low-income markets.',
+  cousin:'GSK', apple:'good-obvious', conf:'m',
+  esg0:74, rank:'3rd of 38', pe:14.2, chart:[100,103,110], chart3y:'+10%',
+  activities:['animalTesting'],
+  policies:{ transition:'Yes, 2030 operational net zero',
+             humanRights:'Yes, group-wide',
+             scope3:'Yes, full inventory',
+             supplierAudit:'Yes, tier 1 and tier 2' },
+  ngo:['No active campaign.','Ranked 2nd of 20 on the Access to Medicine Index.',
+       'Animal testing where required by regulators; 3Rs programme published annually.'],
+  governance:{ chair:'Independent', ceoChange:'None since 2017', holder:'Widely held' },
+  excess:[ +20,  -5,  +5,   0,  +5,  +5 ],
+  esg:   [  74,  75,  76,  76,  77,  78 ],
+  events:[{ year:2024, sev:'moderate', norm:false,
+            note:'A manufacturing suspension at one plant after a quality inspection. Resolved in four months.',
+            signals:['Not foreshadowed. Ordinary industrial noise.'] }] },
+
+];

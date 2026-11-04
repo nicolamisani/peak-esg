@@ -111,11 +111,13 @@ input[type=range]{width:100%;accent-color:var(--green);height:44px}
 .botstrip{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--paper);
   border-top:1px solid var(--rule);padding:10px 14px calc(10px + env(safe-area-inset-bottom));
   min-height:var(--bot);display:flex;gap:11px;align-items:flex-start;cursor:pointer}
+.botstrip>div{min-width:0}
 .botstrip .av{flex:0 0 34px;height:34px;border-radius:50%;display:flex;align-items:center;
   justify-content:center;font-size:15px;font-weight:700;color:#fff;background:var(--green)}
 .botstrip.dist .av{background:var(--blue)}
 .botstrip .who{font-size:11.5px;color:var(--muted);letter-spacing:.03em;text-transform:uppercase}
-.botstrip .msg{font-size:14px;line-height:1.4;margin-top:1px}
+.botstrip .msg{font-size:14px;line-height:1.4;margin-top:1px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .botstrip .msg b{font-weight:650}
 .botstrip .more{margin-left:auto;font-size:11.5px;font-weight:600;color:var(--green);
   background:var(--green-pale);border:1px solid var(--green-2);border-radius:999px;

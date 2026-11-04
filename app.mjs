@@ -1,15 +1,15 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 14:53 UTC
+// Peak ESG — the client   ·   published 2026-11-04 15:04 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11041453';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041453';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041453';
-import { NEWS, newsFor } from './data/news.mjs?v=11041453';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041453';
-import { makeNet } from './net.mjs?v=11041453';
+import * as M from './model/model.mjs?v=11041504';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041504';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041504';
+import { NEWS, newsFor } from './data/news.mjs?v=11041504';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041504';
+import { makeNet } from './net.mjs?v=11041504';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -70,6 +70,10 @@ function recNote(id){
   return `<div class="rec">${who ? who + ' recommended it' : 'Recommended'}</div>`;
 }
 const myDesk = () => deskFor(S.desk, S.analystsPresent || 3);
+const myName = () => (S.who || '').trim();
+// Both heads open by naming you. A line addressed to nobody in particular is
+// read by nobody in particular, and this bar is the only voice in the game.
+const Hey = () => myName() ? esc(myName()) + ', ' : '';
 
 // ------------------------------------------------------------------- rail ---
 const MARK = `<svg width="22" height="20" viewBox="0 0 120 130"><g>
@@ -138,8 +142,8 @@ function botStrip(){
   // read "Nothing from me yet", which told a student nothing about why a
   // stranger was going to be talking to them for the rest of the game.
   const hello = isMgr()
-    ? 'I handle sales. I will tell you here what investors are doing, what other funds are charging, and what the market makes of our policy. Tap this bar at any time to read everything I have sent you.'
-    : 'I handle research. I will tell you here when a rating moves or a story breaks on one of your companies. Tap this bar at any time to read everything I have sent you.';
+    ? 'I handle sales. Tap this bar at any time to read everything I have sent you.'
+    : 'I handle research. Tap this bar at any time to read everything I have sent you.';
   if (!last) return `<div class="${cls} quiet" id="bot">
       <span class="av">${isMgr()?'D':'S'}</span>
       <div><div class="who">${who}</div><div class="msg">${hello}</div></div></div>`;
@@ -162,18 +166,68 @@ function botLog(){
 }
 
 // ------------------------------------------------------------------ paint ---
+// A Firestore snapshot arrives whenever anybody on the fund touches anything,
+// and the old render() replaced document.body.innerHTML every time. Two
+// consequences on a phone: the fixed bar at the bottom was destroyed and
+// rebuilt constantly, which flickers, and window.scrollTo(0,0) ran on every
+// snapshot, so you were thrown back to the top of a dossier while reading it.
+// Now each of the three regions is compared and only written when it changed,
+// and the scroll only resets when the screen actually changes.
+const DOM = { rail:null, body:null, strip:null, screen:null, bot:null };
+
 function render(){
   const scr = SCREENS[S.screen] || SCREENS.join;
-  // The screen is built first, because building it is what sets the aside.
-  S.aside = null;
-  const body = scr.html();
-  document.body.innerHTML = rail() + `<main class="${isMgr()?'wide':''}" id="main">${body}</main>`
-    + botStrip() + (S.botOpen ? botLog() : '');
-  const m = $('#main');
-  scr.wire && scr.wire(m);
-  const b = $('#bot'); if (b) b.onclick = () => { S.botOpen = true; paint(); };
-  const cl = $('#closelog'); if (cl) cl.onclick = () => { S.botOpen = false; paint(); };
-  window.scrollTo(0,0);
+  S.aside = null;                    // an aside belongs to one screen only
+  const bodyHtml  = scr.html();      // building the screen is what sets it
+  const railHtml  = rail();
+  const stripHtml = botStrip() + (S.botOpen ? botLog() : '');
+  const mainCls   = isMgr() ? 'wide' : '';
+
+  // The header must stay a direct child of body: it is position:sticky, and a
+  // wrapper would become its containing block and stop it sticking.
+  let main = document.getElementById('main');
+  if (!main) {
+    document.body.innerHTML = railHtml
+      + `<main class="${mainCls}" id="main"></main>`
+      + `<div id="botwrap"></div>`;
+    main = document.getElementById('main');
+    DOM.rail = railHtml; DOM.body = null; DOM.strip = null;
+  } else if (railHtml !== DOM.rail) {
+    const t = document.querySelector('header.top');
+    if (t) t.outerHTML = railHtml;
+    DOM.rail = railHtml;
+  }
+
+  if (main.className !== mainCls) main.className = mainCls;
+  const screenChanged = S.screen !== DOM.screen;
+  const bodyChanged = bodyHtml !== DOM.body;
+  if (bodyChanged) { main.innerHTML = bodyHtml; DOM.body = bodyHtml; }
+  // Handlers live on the nodes, so they only need re-attaching when the nodes
+  // were replaced. A screen whose html happens to be identical keeps working.
+  if (bodyChanged || screenChanged) scr.wire && scr.wire(main);
+
+  const wrap = document.getElementById('botwrap');
+  if (wrap && stripHtml !== DOM.strip) {
+    wrap.innerHTML = stripHtml;
+    DOM.strip = stripHtml;
+    const b = document.getElementById('bot');
+    if (b) {
+      b.onclick = () => { S.botOpen = true; paint(); };
+      // main reserves --bot at the bottom for this fixed bar. It used to be a
+      // fixed guess, and a two-line message on a phone is taller than the
+      // guess, so the bar sat on top of the button the screen was asking you
+      // to press. Measure it instead, and only write when it moves.
+      const h = b.offsetHeight;
+      if (h && h !== DOM.bot) {
+        document.documentElement.style.setProperty('--bot', h + 'px');
+        DOM.bot = h;
+      }
+    }
+    const cl = document.getElementById('closelog');
+    if (cl) cl.onclick = () => { S.botOpen = false; paint(); };
+  }
+
+  if (screenChanged) { DOM.screen = S.screen; window.scrollTo(0, 0); }
 }
 // Never show nothing. A screen that throws gets an explanation and a way on,
 // and the saved game is left alone — a reload usually fixes it.
@@ -595,7 +649,8 @@ SCREENS.threshold = {
       S.fund.switches = S.switches;
       S.fund.policy = S.policy;
       botSay('Head of Distribution',
-        `Investors have been told the fund now stands for <b>${esc(STRAT_NAME[S.policy.strategy]||'something else')}</b>. `
+        `<b>${Hey()}it is done.</b> Investors have been told the fund now stands for `
+        + `<b>${esc(STRAT_NAME[S.policy.strategy]||'something else')}</b>. `
         + `About <b>${(M.SWITCH_CUT*100).toFixed(0)}%</b> of the money will leave this year.`);
       publishMe(); go('decide');
     };
@@ -625,7 +680,7 @@ SCREENS.fee = {
     m.querySelector('#b').onclick=()=>go('threshold');
     m.querySelector('#n').onclick=()=>{
       S.fund=M.newFund({policy:S.policy,fee:S.fee});
-      botSay('Head of Distribution','The fund is open at <b>'+pct(S.fee)+'</b> a year. Watch what the other funds charge — the market rate moves, and being dearer than it costs us money.',2022);
+      botSay('Head of Distribution',Hey()+'we are open at <b>'+pct(S.fee)+'</b> a year. Keep an eye on what the other funds charge — the market rate moves, and being dearer than it costs us money.',2022);
       publishMe(); go('allocate'); }; }
 };
 
@@ -694,12 +749,8 @@ SCREENS.open = {
             You are allowed to own ${breach.length===1?'it':'them'}. Investors will notice
             the difference.</div>`
         : `<div class="note good">Every holding is inside the policy you wrote.</div>`}
-      <h2>What financial analysts say about your policy</h2>
-      ${S.aiNote
-        ? `<div class="sect"><p>${esc(S.aiNote)}</p>
-            <div class="small" style="margin-top:8px">Peak Research · fund analysis</div></div>`
-        : `<div class="note">They are reading your policy statement now. What they say will
-            appear here in a moment.</div>`}`;
+      ${S.aiNote ? '' : `<div class="note">Your Head of Distribution is reading your policy
+        statement now. Watch the bar at the bottom.</div>`}`;
   },
   wire(){ const st = S.net ? S.net.session() : null;
     if (st && st.stage === 'play')
@@ -949,7 +1000,7 @@ SCREENS.crisis = {
         const specific = new RegExp(S.crisis.c.name.split(' ')[0], 'i').test(text);
         S.fund.crisisCredit = Math.min(0.5, (words>=25?0.35:words>=12?0.2:0.05) + (specific?0.12:0));
         botSay('Head of Distribution',
-          'Your statement has been assessed on this device, without the AI.');
+          Hey()+'your statement has been assessed on this device, without the AI.');
         resolveYear(); return;
       }
       S.waitStarted=Date.now(); go('crisiswait');
@@ -988,21 +1039,21 @@ function resolveYear(){
   Object.keys(S.holdings).forEach(id => {
     const n = newsFor(id, y);
     if (n && n.w === 'major') botSay('Head of Distribution',
-      `<b>${esc(co(id).name)}.</b> ${esc(n.t)} — ${esc(n.s)}`);
+      `<b>${Hey()}we own this.</b> ${esc(co(id).name)}: ${esc(n.t)} — ${esc(n.s)}`);
   });
 
   // the Head of Distribution reacts to what just happened
   const d = decomposition;
   if (d.flows.scandal < -8) botSay('Head of Distribution',
-    `We lost <b>${eur(-d.flows.scandal)}</b> because of a scandal at one of our holdings. Investors are asking what we knew.`);
+    `<b>${Hey()}this is bad.</b> We lost <b>${eur(-d.flows.scandal)}</b> over a scandal at one of our holdings, and investors are asking what we knew.`);
   else if (d.flows.greenwashing < -5) botSay('Head of Distribution',
-    `We lost <b>${eur(-d.flows.greenwashing)}</b> on the gap between what our policy promises and what we actually own. That is money we could keep simply by meaning what we say.`);
+    `<b>${Hey()}we are being caught out.</b> <b>${eur(-d.flows.greenwashing)}</b> left over the gap between what our policy promises and what we actually own. That is money we could keep just by meaning what we say.`);
   else if (d.flows.fee < -6) botSay('Head of Distribution',
-    `We are dearer than other funds, and <b>${eur(-d.flows.fee)}</b> left over price alone.`);
+    `<b>${Hey()}we are too expensive.</b> <b>${eur(-d.flows.fee)}</b> walked out over price alone. Think about the fee.`);
   else if (d.ret > d.retIndex + 4) botSay('Head of Distribution',
-    `We beat the market by <b>${pc(d.ret-d.retIndex)}</b> this year. We could charge more.`);
+    `<b>${Hey()}good year.</b> We beat the market by <b>${pc(d.ret-d.retIndex)}</b>. We could charge more for this.`);
   else botSay('Head of Distribution',
-    `We earned <b>${eur(d.feeTake)}</b> in fees this year. The fund is ${d.end>=d.start?'up':'down'}, at <b>${eur(d.end)}</b>.`);
+    `${Hey()}we earned <b>${eur(d.feeTake)}</b> in fees this year, and the fund is ${d.end>=d.start?'up':'down'} at <b>${eur(d.end)}</b>.`);
   publishMe(); go('result');
 }
 
@@ -1149,12 +1200,14 @@ function connect(){
                    retn: mine.aiPitch.returnDriven || 0 };
       if (S.fund) S.fund.appeal = S.appeal;
       S.aiNote = mine.aiPitch.note || '';
-      botSay('Head of Distribution', esc(mine.aiPitch.note || 'Your policy has been read.'));
+      botSay('Head of Distribution',
+        `<b>${Hey()}I have read your policy.</b> ${esc(mine.aiPitch.note || 'It will do.')}`);
     }
     if (mine.aiCrisis && S.aiCrisisYear !== mine.aiCrisis.year) {
       S.aiCrisisYear = mine.aiCrisis.year;
       if (S.fund) S.fund.crisisCredit = mine.aiCrisis.credit || 0;
-      botSay('Head of Distribution', esc(mine.aiCrisis.note || 'Your statement has been read.'));
+      botSay('Head of Distribution',
+        `<b>${Hey()}the market has read your statement.</b> ${esc(mine.aiCrisis.note || 'It landed.')}`);
     }
     // Her own analysts' flags, and only theirs. The worker matches them by team
     // and writes them into her document, because the rules let a student read
@@ -1251,4 +1304,4 @@ catch (err) {
   startClean(); paint();
 }
 window.__peakBooted = true;              // the boot guard in index.html watches this
-window.PEAK = { S, M, go, advance };     // for testing from the console
+window.PEAK = { S, M, go, advance, publishMe };  // for testing from the console

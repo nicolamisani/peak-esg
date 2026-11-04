@@ -70,6 +70,8 @@ function fireNet(code) {
                                   teamFlags: v.teamFlags || null, teamResult: v.teamResult || null,
                                   desk: v.desk || null, full: !!v.full,
                                   teamRoster: v.teamRoster || null,
+                                  // a field missing from this list never reaches the client
+                                  esgRank: v.esgRank || null,
                                   evicted: v.evicted || null } };
       subs.forEach(f => f(cache)); });
     return fs;

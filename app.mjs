@@ -1,16 +1,16 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 21:07 UTC
+// Peak ESG — the client   ·   published 2026-11-04 21:36 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11042107';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11042107';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11042107';
-import { NEWS, newsFor } from './data/news.mjs?v=11042107';
-import { EPS, dossierAt } from './data/evolve.mjs?v=11042107';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11042107';
-import { makeNet } from './net.mjs?v=11042107';
+import * as M from './model/model.mjs?v=11042136';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11042136';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11042136';
+import { NEWS, newsFor } from './data/news.mjs?v=11042136';
+import { EPS, dossierAt } from './data/evolve.mjs?v=11042136';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11042136';
+import { makeNet } from './net.mjs?v=11042136';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -61,7 +61,16 @@ const save = () => { try{ localStorage.setItem(KEY, JSON.stringify({
   yearStart:S.yearStart, policySnapshot:S.policySnapshot,
   policyTextSnapshot:S.policyTextSnapshot,
   aiCrisisYear:S.aiCrisisYear, aiPitchStamp:S.aiPitchStamp,
-  adds:S.adds, drops:S.drops })); }catch(e){} };
+  // The scandal log and the COO's review feed the ending and the instructor's
+  // export; publishMe sends crisisLog, so losing it on a reload overwrote the
+  // server's copy with []. overclaim goes with aiPitchStamp: the stamp stops
+  // the assessment being re-applied, so without it a reload zeroed the
+  // greenwashing charge. The crisis fields are published and exported too, and
+  // crisisYear is what stops the same scandal firing twice in one year.
+  crisisLog:S.crisisLog, aiReview:S.aiReview, overclaim:S.overclaim, aiNote:S.aiNote,
+  crisisText:S.crisisText, crisisYear:S.crisisYear, crisisEvent:S.crisisEvent,
+  crisisCompany:S.crisisCompany, crisisWeight:S.crisisWeight, crisisOutside:S.crisisOutside,
+  esgRank:S.esgRank })); }catch(e){} };
 const load = () => { try{ return JSON.parse(localStorage.getItem(KEY)) || null; }catch(e){ return null; } };
 
 // ----------------------------------------------------------------- helpers --
@@ -675,7 +684,10 @@ SCREENS.dossier = {
         moved ? ` <span class="small">(${moved>0?'+':'\u2212'}${Math.abs(moved)} since 2021)</span>` : ''}</span></div>
       <div class="kv"><span class="k">Rank in its industry</span><span class="v">${esc(D.rank)}</span></div>
       <div class="kv"><span class="k">Excluded activities</span><span class="v">${
-        c.activities.length?c.activities.map(a=>esc(ACTIVITIES[a])).join('<br>'):'None'}</span></div>`; }
+        c.activities.length?c.activities.map(a=>esc(ACTIVITIES[a])).join('<br>'):'None'}</span></div>
+      ${(moved || D.rank !== c.rank) ? `<div class="note">Funds were screened when they opened, on the
+        file as it stood at the end of 2021: <b>${c.esg0} / 100, ranked ${esc(c.rank)}</b>. Your
+        fund's policy is checked against those figures every year, not against the ones above.</div>` : ''}`; }
     if (s==='pol') body = Object.entries({
       'Climate transition plan':D.policies.transition, 'Human rights policy':D.policies.humanRights,
       'Scope 3 disclosure':D.policies.scope3, 'Supplier audit':D.policies.supplierAudit })
@@ -1226,7 +1238,7 @@ SCREENS.performance = {
 function runHistory(){
   const years = (S.fund && S.fund.years) || [];
   return years.map((d, i) => ({
-    year: YEARS[i],
+    year: d.year ?? YEARS[i],          // a late or skipped fund does not start in 2022
     ret: round2(d.ret), market: round2(d.retIndex),
     start: round2(d.start), end: round2(d.end),
     fees: round2(d.feeTake), esg: d.esg == null ? null : Math.round(d.esg),
@@ -1241,13 +1253,13 @@ function runSummary(){
   const log = S.crisisLog || [];
   const board = (S.board || []).slice().sort((a,b)=>(b.fees||0)-(a.fees||0));
   const place = board.findIndex(f => isMyFund(f));
-  const esgBoard = (S.board || []).filter(f => f.esg != null)
-                                  .sort((a,b)=>(b.esg||0)-(a.esg||0));
-  const esgPlace = esgBoard.findIndex(f => isMyFund(f));
+  // The public board carries no ESG scores; the worker sends the place itself.
+  const esgPlace = S.esgRank && S.esgRank.rank ? S.esgRank.rank - 1 : -1;
   const aum = S.fund ? M.totalAUM(S.fund) : 0;
   const p = S.policy || {};
   return {
-    fund: S.fundName || '', manager: r.manager ? (r.manager.who || S.who) : (S.who || ''),
+    // roster.manager is the manager's name as a string, not an object
+    fund: S.fundName || '', manager: (typeof r.manager === 'string' && r.manager) || S.who || '',
     analysts: (r.team || []).map(a => a.who || 'unnamed'),
     strategy: STRAT_NAME[p.strategy] || p.strategy || '',
     threshold: p.strategy === 'exclude' ? (p.excluded || []).join(' + ')
@@ -1269,12 +1281,19 @@ function runSummary(){
     review: S.aiReview || null,
   };
 }
+// Text a student wrote that starts like a formula (= + - @) is run by Excel
+// when the file is opened. A leading apostrophe makes it plain text. Numbers,
+// negative ones included, and signed figures like "+12" are left as they are.
+const noFormula = v => {
+  const t = String(v == null ? '' : v);
+  return /^[=+\-@\t\r]/.test(t) && !/^[-+]?\d+(\.\d+)?%?$/.test(t) ? "'" + t : t;
+};
 // A file the team keeps. No server: the rows are built here and handed to the
 // browser as a download, which also means it still works with no network.
 function downloadCSV(){
   const s = runSummary();
   const cell = v => {
-    const t = String(v == null ? '' : v);
+    const t = noFormula(v);
     return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
   };
   const row = (...c) => c.map(cell).join(',');
@@ -1331,7 +1350,7 @@ function downloadCSV(){
 
 function downloadAnalystCSV(){
   const r = S.teamResult || {}, ro = S.roster || {};
-  const cell = v => { const t = String(v == null ? '' : v);
+  const cell = v => { const t = noFormula(v);
     return /[",\n]/.test(t) ? '"' + t.replace(/"/g,'""') + '"' : t; };
   const row = (...c) => c.map(cell).join(',');
   const mine = myDesk().map(id => ({ c: co(id), w: (r.holdings||{})[id] || 0, f: !!S.flags[id] }));
@@ -1342,7 +1361,7 @@ function downloadAnalystCSV(){
     row('Fund', r.name || S.fundName || ''),
     row('Analyst', S.who || ''),
     row('Desk', (DESKS[S.desk] || {}).name || ''),
-    row('Fund manager', ro.manager ? (ro.manager.who || '') : ''),
+    row('Fund manager', typeof ro.manager === 'string' ? ro.manager : ''),
     row('Other analysts', (ro.team || []).map(a => a.who).filter(w => w && w !== S.who).join(' / ')),
     '',
     row('FUND RESULT'),
@@ -1919,6 +1938,7 @@ function connect(){
     // An analyst's fund result, written back the same way at the reveal.
     if (!isMgr() && mine.teamResult) S.teamResult = mine.teamResult;
     if (mine.teamRoster) S.roster = mine.teamRoster;
+    if (isMgr() && mine.esgRank) S.esgRank = mine.esgRank;
     if (!isMgr()) {
       // Removed by the manager. Let go of the fund so the picker is usable
       // again, and say who did it — otherwise the screen simply empties.

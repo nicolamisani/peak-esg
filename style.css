@@ -205,3 +205,50 @@ details.ex blockquote{margin:10px 0;padding:12px 15px;background:#fff;
 .crew .manage{margin-left:auto;font-size:11px;font-weight:650;color:var(--green);
   background:var(--green-pale);border:1px solid var(--green-2);border-radius:999px;padding:2px 10px}
 .botlog .sheet .co{margin-bottom:8px}
+
+/* Waiting is grey, and always says what it is waiting for. */
+.waitbox{border:1px dashed var(--rule-2);border-radius:9px;padding:13px 15px;margin:16px 0;
+  background:var(--panel);color:var(--ink-2);font-size:14px}
+
+/* The year running: the one moment every device shows the same thing. */
+.runwrap{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:46vh;text-align:center}
+.runyear{font-family:var(--mono);font-size:58px;font-weight:600;letter-spacing:-.03em;
+  color:var(--ink);animation:runpulse 1.4s ease-in-out infinite}
+.runline{width:min(420px,78vw);height:3px;background:var(--rule-2);border-radius:3px;
+  margin:22px 0 18px;overflow:hidden}
+.runline i{display:block;height:100%;width:40%;background:var(--green);border-radius:3px;
+  animation:runslide 1.25s cubic-bezier(.4,0,.2,1) infinite}
+.runsub{font-size:15px;color:var(--muted)}
+@keyframes runpulse{0%,100%{opacity:1}50%{opacity:.55}}
+@keyframes runslide{0%{transform:translateX(-110%)}100%{transform:translateX(260%)}}
+@media (prefers-reduced-motion:reduce){
+  .runyear{animation:none}
+  .runline i{animation:none;width:100%}
+}
+
+/* The title screen: the mark at the size of a thing you are about to play. */
+.title{display:flex;flex-direction:column;align-items:center;text-align:center;
+  padding:34px 0 30px;margin-bottom:6px}
+.titlemark svg{width:92px;height:84px;display:block}
+.titlename{font-size:42px;font-weight:700;letter-spacing:-.035em;margin-top:14px;line-height:1}
+.titlename span{color:var(--green)}
+.titlesub{font-family:var(--mono);font-size:12px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--muted);margin-top:12px}
+@media (min-width:700px){ .titlemark svg{width:118px;height:108px} .titlename{font-size:54px} }
+
+/* A spent budget, and a company you cannot act on because of it. */
+.budget{display:inline-block;margin:4px 6px 0 0;font-size:11.5px;font-weight:600;
+  background:var(--panel);border:1px solid var(--rule-2);border-radius:999px;padding:3px 10px;
+  color:var(--ink-2)}
+.budget.spent{background:var(--amber-pale);border-color:var(--amber);color:var(--amber)}
+.co.off{opacity:.5}
+.risky{color:var(--amber);font-size:15px;margin-right:4px}
+
+/* Which of the three beats of the year you are in. */
+.beats{display:flex;gap:0;background:var(--panel);border-bottom:1px solid var(--rule);
+  padding:0 10px}
+.beats i{flex:1;text-align:center;font-style:normal;font-size:11px;font-weight:600;
+  letter-spacing:.02em;color:var(--soft);padding:7px 4px 6px;border-bottom:2px solid transparent}
+.beats i.done{color:var(--muted)}
+.beats i.on{color:var(--green);border-bottom-color:var(--green)}

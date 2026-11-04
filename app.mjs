@@ -1,15 +1,15 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 13:57 UTC
+// Peak ESG — the client   ·   published 2026-11-04 14:02 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11041357';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041357';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041357';
-import { NEWS, newsFor } from './data/news.mjs?v=11041357';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041357';
-import { makeNet } from './net.mjs?v=11041357';
+import * as M from './model/model.mjs?v=11041402';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041402';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041402';
+import { NEWS, newsFor } from './data/news.mjs?v=11041402';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041402';
+import { makeNet } from './net.mjs?v=11041402';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -202,7 +202,7 @@ const HOWTO = [
   ['Four of you to a fund, and none of you can see the whole thing',
    'One of you creates the fund and runs it. The other three are analysts, and each gets four companies to research. <b>The manager is shown no company information at all</b> — not a name, not a score, nothing.'],
   ['So the game is the conversation',
-   'The analysts read; the manager decides. Nothing reaches her except what you say out loud. Anything that lets one of you succeed without talking to the others would be a mistake in the design, not a shortcut.'],
+   'The analysts read; the manager decides. Nothing reaches the manager except what you say out loud. Anything that lets one of you succeed without talking to the others would be a mistake in the design, not a shortcut.'],
   ['Decide what the fund stands for, and how strictly',
    'Exclude activities, demand companies rank near the top of their industry, or set a minimum ESG score. Strict policies shut you out of winners; loose ones leave you open to the charge that the label means nothing.'],
   ['You write the policy down, and it is held against what you hold',
@@ -298,8 +298,8 @@ SCREENS.brief = {
       <h1>You are an analyst at ${esc(S.fundName)}</h1>
       <p class="lede">Four companies are on your desk${S.desk?` — the ${DESKS[S.desk].name.toLowerCase()}`:''}.
         Nobody else in the group can see them, and the manager cannot see any company at all.</p>
-      <div class="note info">News about your four reaches you and only you. What the manager hears is what you tell her.</div>
-      <p class="task">Read your four. Decide what she actually needs to know.</p>
+      <div class="note info">News about your four reaches you and only you. The manager hears only what you choose to say.</div>
+      <p class="task">Read your four. Decide what the manager actually needs to know.</p>
       <div class="actions"><button id="n" class="wide">Open my desk</button></div>`;
   },
   wire(m){ m.querySelector('#n').onclick=()=> go(isMgr()?'strategy':'desk'); }
@@ -331,7 +331,7 @@ SCREENS.team = {
             <div class="desc">${full ? 'full — three analysts already'
               : `${n} of ${MAX_ANALYSTS} analysts so far`}</div></div>`; }).join('')}
       </div>
-      <div class="note">If two funds share a name, check with her which is yours.</div>
+      <div class="note">If two funds share a name, ask your manager which is yours.</div>
       <div class="actions"><button id="n" class="wide" ${S.teamId?'':'disabled'}>That's mine</button></div>`;
   },
   wire(m){
@@ -677,13 +677,13 @@ SCREENS.news = {             // analyst: what happened to my four
 
 SCREENS.standby = {          // analyst: between decisions
   html(){ const y=YEARS[S.year];
-    return `<h1>Tell her</h1>
-      <p class="task">She has no company information at all. Say the one thing she needs.</p>
+    return `<h1>Tell the manager</h1>
+      <p class="task">The manager has no company information at all. Say the one thing they need.</p>
       ${myDesk().map(id=>{ const c=co(id); const f=S.flags[id];
         return `<div class="co${f?' held':''}" data-id="${id}">
           <div><div class="nm">${esc(c.name)}</div><div class="ind">${esc(c.industry)}</div></div>
           <span class="small" style="margin-left:auto">${f?REC:'Tap to recommend'}</span></div>`; }).join('')}
-      <div class="note">Recommending a company puts your name beside it on her screen —
+      <div class="note">Recommending a company puts your name beside it on the manager's screen —
         <b>“${esc((S.who||'You').trim()||'You')} recommended it”</b>. It does not say why.
         That is your job, out loud.</div>
       <div class="actions"><button class="ghost" id="r">Re-read my dossiers</button></div>`; },
@@ -753,7 +753,7 @@ SCREENS.switch = {
         Changing it now costs you <b>${(M.SWITCH_CUT*100).toFixed(0)}%</b> of the fund,
         immediately — those investors bought the old promise.</p>
       <div class="note warn"><b>And it does not end there.</b> Conviction money discounts
-        a manager who changes her mind, every year from now on. A fund that rewrites its
+        a manager who changes their mind, every year from now on. A fund that rewrites its
         principles twice is not running a strategy.</div>
       <p class="task">You will choose the strategy again, set the threshold, and write
         the policy afresh — the market has to be told, in your own words.</p>
@@ -923,13 +923,13 @@ SCREENS.teamfinal = {
       <div class="note info"><b>Portfolio ESG score ${Math.round(r.esg||0)}.</b>
         ${r.esgRank?`That is ${ord(r.esgRank)} of ${r.of} on sustainability, against ${ord(r.rank)} on fees.
         Whether those two agree is the whole argument.`:''}</div>
-      <h2>Your four, and what she did with them</h2>
+      <h2>Your four, and what the manager did with them</h2>
       <div class="decomp">${mine.map(x=>`<div class="row">
         <span>${esc(x.c.name)}${x.f?' <span class="small">· you recommended it</span>':''}</span>
         <span class="amt">${x.w?`held ${x.w}×`:'not held'}</span></div>`).join('')}</div>
       <div class="note">${
-        held.length===0 ? 'She held none of your four. Did she hear what you told her, or did you not push hard enough?'
-        : mine.some(x=>x.f && x.w) ? 'She bought something you had recommended. Was that your call or hers — and did you tell her why?'
+        held.length===0 ? 'The manager held none of your four. Did they hear what you told them, or did you not push hard enough?'
+        : mine.some(x=>x.f && x.w) ? 'The manager bought something you had recommended. Was that your call or theirs — and did you tell them why?'
         : 'Nothing you recommended ended up in the book.'}</div>`;
   }
 };

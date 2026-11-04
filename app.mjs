@@ -1,15 +1,15 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 16:11 UTC
+// Peak ESG — the client   ·   published 2026-11-04 16:20 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11041611';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041611';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041611';
-import { NEWS, newsFor } from './data/news.mjs?v=11041611';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041611';
-import { makeNet } from './net.mjs?v=11041611';
+import * as M from './model/model.mjs?v=11041620';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041620';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041620';
+import { NEWS, newsFor } from './data/news.mjs?v=11041620';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041620';
+import { makeNet } from './net.mjs?v=11041620';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -23,6 +23,7 @@ const S = {
   year:0, phase:'setup',
   resolvedYear:null,           // the last year this fund actually ran
   yearStart:null,              // the portfolio as the year opened, for the budgets
+  readyYear:null,              // the year this fund has said it is done deciding
   policy:{ strategy:null, excluded:[], rank:5, minScore:50 },
   policyText:'', fee:M.FEE_START,
   reviewYear:0, reviewTo:null,     // which year's review, and where it leads
@@ -44,7 +45,7 @@ function startClean(){
 const save = () => { try{ localStorage.setItem(KEY, JSON.stringify({
   code:S.code, role:S.role, fundName:S.fundName, teamId:S.teamId, who:S.who,
   policy:S.policy, policyText:S.policyText, ejected:S.ejected,
-  resolvedYear:S.resolvedYear,
+  resolvedYear:S.resolvedYear, readyYear:S.readyYear,
   fee:S.fee, holdings:S.holdings, fund:S.fund, screen:S.screen,
   year:S.year, flags:S.flags, bot:S.bot })); }catch(e){} };
 const load = () => { try{ return JSON.parse(localStorage.getItem(KEY)) || null; }catch(e){ return null; } };
@@ -1101,6 +1102,7 @@ SCREENS.decide = {
   html(){
     const n = Object.keys(S.holdings).length;
     const breach = M.breaches(S.policy, S.holdings);
+    const said = S.readyYear === S.year;
     const used = budget();
     const addsLeft = ADDS_YEAR - used.adds, dropsLeft = DROPS_YEAR - used.drops;
     const st = S.yearStart || S.holdings || {};
@@ -1148,15 +1150,25 @@ SCREENS.decide = {
         outside the policy you wrote. You may keep ${breach.length === 1 ? 'it' : 'them'};
         investors will notice.</div>` : ''}
 
-      <div class="waitbox"><b>Waiting for ${YEARS[S.year]} to run</b>
-        <div class="small" style="margin-top:4px">Change what you like until the instructor
-          runs the year. Nothing you do here costs anything until then.</div></div>`;
+      ${n >= M.MIN_HOLDINGS ? `<div class="actions">
+        <button id="ready" class="${said ? 'ghost' : 'wide'}">${said
+          ? 'Actually, we are still deciding'
+          : 'We are done \u2014 run the year when you like'}</button></div>` : ''}
+      <div class="waitbox"><b>${said
+        ? `Told the front of the room you are ready for ${YEARS[S.year]}`
+        : `Waiting for ${YEARS[S.year]} to run`}</b>
+        <div class="small" style="margin-top:4px">${said
+          ? 'You can still change anything until the year actually runs \u2014 just say so above.'
+          : 'Change what you like. Nothing here costs anything until the year runs.'}</div></div>`;
   },
   wire(m){
     const r = m.querySelector('#r');
     r.oninput = () => { S.fee = +r.value / 10000; paint(); const x = $('#r'); if (x) x.focus(); };
     const sw = m.querySelector('#switch');
     if (sw) sw.onclick = () => go('switch');
+    const rdy = m.querySelector('#ready');
+    if (rdy) rdy.onclick = () => {
+      S.readyYear = S.readyYear === S.year ? null : S.year; publishMe(); paint(); };
     // Weights are free; adds and drops are not. A refusal says so out loud
     // rather than doing nothing, which is what made the screen look broken.
     m.querySelectorAll('[data-w]').forEach(b => b.onclick = e => { e.stopPropagation();
@@ -1494,7 +1506,7 @@ function connect(){
       S.year = st.year; go('running');
     } else if (st.stage === 'decide' && stageChanged) {
       // A new year to decide. Analysts read this year's news first.
-      S.year = st.year; S.trades = 0;
+      S.year = st.year; S.trades = 0; S.readyYear = null;
       S.yearStart = { ...S.holdings };     // the budgets measure drift from here
       go(isMgr() ? 'decide' : 'news');
     } else if (st.stage === 'results' && !RESULTS.includes(S.screen)
@@ -1515,6 +1527,10 @@ function publishMe(){
     year: S.year,
     // Readiness means a RESOLVED year, not a year counter the worker moved.
     resolvedYear: S.resolvedYear == null ? null : S.resolvedYear,
+    // "We have finished deciding" — what the instructor watches to know when
+    // to run the year. Separate from resolvedYear, which is what actually ran.
+    readyYear: S.readyYear == null ? null : S.readyYear,
+    at: Date.now(),               // last sign of life, for the control panel
     policy:S.policy, holdings:S.holdings,
     policyText:S.policyText, ejected:S.ejected||{},
     crisisText:S.crisisText||'', crisisYear:S.crisisYear||null,

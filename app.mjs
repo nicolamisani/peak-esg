@@ -1,20 +1,23 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 06:50 UTC
+// Peak ESG — the client   ·   published 2026-11-04 07:00 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11040650';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11040650';
-import { INDEX, YEARS, MACRO, SCENARIO, ENDINGS } from './data/world.mjs?v=11040650';
-import { NEWS, newsFor } from './data/news.mjs?v=11040650';
-import { ROLES, DESKS, deskFor } from './roles.mjs?v=11040650';
-import { makeNet } from './net.mjs?v=11040650';
+import * as M from './model/model.mjs?v=11040700';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11040700';
+import { INDEX, YEARS, MACRO, SCENARIO, ENDINGS } from './data/world.mjs?v=11040700';
+import { NEWS, newsFor } from './data/news.mjs?v=11040700';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11040700';
+import { makeNet } from './net.mjs?v=11040700';
 
 // ------------------------------------------------------------------ state ---
 const S = {
   code:'', role:null, fundName:'', screen:'join', net:null,
   teamId:null,                 // the manager's uid — what makes four devices a fund
+  switches:0, switching:false,
+  desk:null,                   // a1/a2/a3, assigned by the worker in join order
+  analystsPresent:3,
   year:0, phase:'setup',
   policy:{ strategy:null, excluded:[], rank:5, minScore:50 },
   policyText:'', pitchText:'', fee:M.FEE_START,
@@ -47,9 +50,10 @@ const pc  = (x,d=1) => (x>=0?'+':'−') + Math.abs(x).toFixed(d) + '%';
 const bp  = f => (f*10000).toFixed(0) + 'bp';
 const pct = f => (f*100).toFixed(2) + '%';
 const isMgr = () => S.role==='manager';
+const STRAT_NAME = Object.fromEntries(M.STRATEGIES.map(x => [x.id, x.name]));
 const ord = n => n + (['th','st','nd','rd'][(n%100-n%10!=10)*(n%10<4)*n%10] || 'th');
 const co = id => M.byId(id);
-const myDesk = () => deskFor(S.role);
+const myDesk = () => deskFor(S.desk, S.analystsPresent || 3);
 
 // ------------------------------------------------------------------- rail ---
 const MARK = `<svg width="22" height="20" viewBox="0 0 120 130"><g>
@@ -65,9 +69,12 @@ function rail() {
   const where = playing ? `${YEARS[S.year]} · year ${S.year+1} of 6` : stepLabel();
   const left = S.countdownEnds ? Math.max(0, Math.round((S.countdownEnds - Date.now())/1000)) : 0;
   const cd = left ? `<span class="clock">${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}</span>` : '';
+  const who = S.fundName
+    ? `<span class="fund">${esc(S.fundName)}${S.desk ? ' · ' + DESKS[S.desk].name : isMgr() ? ' · manager' : ''}</span>`
+    : '';
   return `<div class="rail">
     <span class="mark">${MARK} Peak <span class="esg">ESG</span></span>
-    <span class="where">${esc(where)}</span>${cd}
+    ${who}<span class="where">${esc(where)}</span>${cd}
     <span class="dots">${dots}</span></div>`;
 }
 function stepLabel(){
@@ -75,7 +82,8 @@ function stepLabel(){
     threshold:'step 2 of 4 · policy', fee:'step 3 of 4 · price',
     pitch:'step 4 of 4 · prospectus', wait:'waiting', desk:'your desk',
     dossier:'your desk', allocate:'the portfolio',
-    team:'which fund?', teamfinal:'the result', final:'the result',
+    team:'which fund?', seat:'taking a seat', teamfinal:'the result', final:'the result',
+    switch:'changing the policy',
     standby:'brief her', news:'the news', market:'the market' };
   return m[S.screen] || '';
 }
@@ -149,17 +157,19 @@ SCREENS.join = {
     <p class="lede">${esc(SCENARIO)}</p>
     <h2>Join</h2>
     <div class="code">${[0,1,2,3].map(i=>`<input inputmode="numeric" maxlength="1" data-i="${i}" value="${esc(S.code[i]||'')}">`).join('')}</div>
-    <p class="task">Everyone in your group types the same four digits.</p>
-    <h2>Who are you?</h2>
-    <div class="choices two" id="roles">
+    <p class="task">Everyone in the room types the same four digits — your group is chosen next.</p>
+    <h2>What are you doing?</h2>
+    <div class="choices" id="roles">
       ${Object.entries(ROLES).map(([k,r])=>`<div class="choice${S.role===k?' sel':''}" data-r="${k}">
         <div class="lbl">${esc(r.name)}</div><div class="desc">${esc(r.blurb)}</div></div>`).join('')}
     </div>
     <div id="nameRow" class="${S.role==='manager'?'':'hidden'}">
       <h2>Name the fund</h2>
       <input type="text" id="fname" maxlength="28" placeholder="Verde Capital" value="${esc(S.fundName)}">
+      <div class="small">Your analysts will look for this name, so say it out loud.</div>
     </div>
-    <div class="actions"><button id="go" class="wide" ${S.role&&S.code.length===4?'':'disabled'}>Start</button></div>`; },
+    <div class="actions"><button id="go" class="wide" ${S.role&&S.code.length===4?'':'disabled'}>${
+      S.role==='analyst' ? 'Find my fund' : 'Start'}</button></div>`; },
   wire(m){
     const boxes=[...m.querySelectorAll('.code input')];
     boxes.forEach((b,i)=>{ b.oninput=()=>{ b.value=b.value.replace(/\D/g,'');
@@ -197,8 +207,9 @@ SCREENS.brief = {
       <p class="task">Next: choose what the fund stands for.</p>
       <div class="actions"><button id="n" class="wide">Begin</button></div>`;
     return `
-      <h1>You are an analyst</h1>
-      <p class="lede">Four companies are on your desk. Nobody else in the group can see them, and the manager cannot see any company at all.</p>
+      <h1>You are an analyst at ${esc(S.fundName)}</h1>
+      <p class="lede">Four companies are on your desk${S.desk?` — the ${DESKS[S.desk].name.toLowerCase()}`:''}.
+        Nobody else in the group can see them, and the manager cannot see any company at all.</p>
       <div class="note info">News about your four reaches you and only you. What the manager hears is what you tell her.</div>
       <p class="task">Read your four. Decide what she actually needs to know.</p>
       <div class="actions"><button id="n" class="wide">Open my desk</button></div>`;
@@ -213,28 +224,52 @@ SCREENS.brief = {
 SCREENS.team = {
   html(){
     const funds = (S.board || []).filter(f => f.uid);
+    if (S.deskFull) return `<h1>That fund is full</h1>
+      <p class="lede"><b>${esc(S.fundName)}</b> already has its three analysts.</p>
+      <p class="task">Join another fund, or ask a manager in the room to start one.</p>
+      <div class="actions"><button id="back" class="wide">Choose a different fund</button></div>`;
     if (!funds.length) return `<h1>Which fund?</h1>
-      <p class="lede">Waiting for your fund manager to join and name the fund.</p>
-      <p class="task">She types the same four digits, chooses <b>Fund manager</b>, and names it.
-        It will appear here within a second or two.</p>
+      <p class="lede">Waiting for a fund manager to create one.</p>
+      <p class="task">Someone in your group types the same four digits, chooses
+        <b>Create the fund</b>, and names it. It will appear here within a second or two.</p>
       <div class="note">Nothing to do yet. Keep this screen open.</div>`;
     return `<h1>Which fund?</h1>
-      <p class="task">Tap the fund your manager just named.</p>
+      <p class="task">Tap the one your manager just named. Three analysts to a fund.</p>
       <div class="choices" id="funds">
-        ${funds.map(f=>`<div class="choice${S.teamId===f.uid?' sel':''}" data-u="${esc(f.uid)}">
-          <div class="lbl">${esc(f.name)}</div></div>`).join('')}
+        ${funds.map(f=>{ const n=(f.seats||1)-1, full=n>=MAX_ANALYSTS;
+          return `<div class="choice${S.teamId===f.uid?' sel':''}${full?' off':''}"
+            ${full?'':`data-u="${esc(f.uid)}"`}>
+            <div class="lbl">${esc(f.name)}</div>
+            <div class="desc">${full ? 'full — three analysts already'
+              : `${n} of ${MAX_ANALYSTS} analysts so far`}</div></div>`; }).join('')}
       </div>
       <div class="note">If two funds share a name, check with her which is yours.</div>
       <div class="actions"><button id="n" class="wide" ${S.teamId?'':'disabled'}>That's mine</button></div>`;
   },
   wire(m){
+    const b = m.querySelector('#back');
+    if (b) b.onclick = () => { S.deskFull=false; S.teamId=null; S.fundName=''; publishMe(); paint(); };
     m.querySelectorAll('[data-u]').forEach(c=>c.onclick=()=>{
       S.teamId = c.dataset.u;
       S.fundName = (S.board||[]).find(f=>f.uid===S.teamId)?.name || '';
       paint(); });
     const n = m.querySelector('#n');
-    if (n) n.onclick = () => { publishMe(); go('brief'); };
+    // The worker decides which desk this is — the client only asks to sit down.
+    if (n) n.onclick = () => { S.joinedAt = S.joinedAt || Date.now(); publishMe(); go('seat'); };
   }
+};
+
+// Waiting for the worker to hand out a desk. It is nearly always instant, but
+// two analysts tapping the same fund at the same moment must not both get the
+// first desk, so one authority assigns them and the client waits to be told.
+SCREENS.seat = {
+  html(){
+    if (S.deskFull) return SCREENS.team.html();
+    return `<h1>Taking your seat</h1>
+      <p class="lede">Finding you a desk at <b>${esc(S.fundName)}</b>.</p>
+      <div class="note">A moment.</div>`;
+  },
+  wire(m){ if (S.deskFull) { S.screen='team'; } }
 };
 
 // =============================================================================
@@ -375,7 +410,7 @@ SCREENS.threshold = {
       if(S.policy.strategy==='best') S.policy.rank=+r.value; else S.policy.minScore=+r.value;
       paint(); m.querySelector('#r').focus(); };
     m.querySelector('#b').onclick=()=>go('strategy');
-    m.querySelector('#n').onclick=()=>go('fee');
+    m.querySelector('#n').onclick=()=>go(S.switching ? 'pitch' : 'fee');
   }
 };
 
@@ -411,8 +446,23 @@ SCREENS.pitch = {
   wire(m){
     m.querySelector('#pol').oninput=e=>{S.policyText=e.target.value;};
     m.querySelector('#pit').oninput=e=>{S.pitchText=e.target.value;};
-    m.querySelector('#b').onclick=()=>go('fee');
-    m.querySelector('#n').onclick=()=>{ S.fund=M.newFund({policy:S.policy,fee:S.fee});
+    m.querySelector('#b').onclick=()=>go(S.switching ? 'threshold' : 'fee');
+    m.querySelector('#n').onclick=()=>{
+      if (S.switching) {
+        // Charged by the model in the year it happened, then cleared.
+        S.switching = false;
+        S.switches = (S.switches || 0) + 1;
+        S.fund.switchPending = true;
+        S.fund.switches = S.switches;
+        S.fund.policy = S.policy;
+        S.aiPitchSeen = false;           // the new copy has to be judged afresh
+        botSay('Head of Distribution',
+          `We have told the market the fund now stands for <b>${esc(STRAT_NAME[S.policy.strategy]||'something else')}</b>. `
+          + `Expect about <b>${(M.SWITCH_CUT*100).toFixed(0)}%</b> of the book to leave this year.`);
+        publishMe(); go('decide');
+        return;
+      }
+      S.fund=M.newFund({policy:S.policy,fee:S.fee});
       botSay('Head of Distribution','Opening at <b>'+pct(S.fee)+'</b>. Keep an eye on what the others are charging — the median moves.',2022);
       publishMe(); go('allocate'); };
   }
@@ -497,6 +547,15 @@ SCREENS.decide = {
       <h2>Fee &mdash; ${pct(S.fee)}</h2>
       <input type="range" id="r" min="10" max="200" step="5" value="${Math.round(S.fee*10000)}">
       <div class="small">Peers are charging about <b>${pct(S.peerFee)}</b>.</div>
+      ${S.year>=5 ? '' : `<div class="note" style="margin-top:14px">
+        <b>${esc(STRAT_NAME[S.policy.strategy]||'Your policy')}.</b>
+        ${S.switches ? `Changed ${S.switches===1?'once':S.switches+' times'} already. `
+                     : ''}You can change what the fund stands for, but investors bought
+        the promise you made — a fixed share of them leave, and the conviction money
+        remembers.
+        <div class="actions" style="margin-top:10px">
+          <button class="ghost" id="switch">Change what the fund stands for</button></div>
+      </div>`}
       <h2>Holdings</h2>
       ${UNIVERSE.map(c=>{ const w=S.holdings[c.id];
         return `<div class="co ${w?'held':''}" data-id="${c.id}">
@@ -516,10 +575,42 @@ SCREENS.decide = {
     m.querySelectorAll('[data-id]').forEach(row=>row.onclick=()=>{ if(!canTrade()) return;
       S.trades++; const id=row.dataset.id;
       if (S.holdings[id]) delete S.holdings[id]; else S.holdings[id]=1; publishMe(); paint(); });
+    const sw = m.querySelector('#switch');
+    if (sw) sw.onclick = () => go('switch');
     m.querySelector('#n').onclick=()=>{
       const hit = severeHit();
       if (hit && S.crisisYear !== YEARS[S.year]) { S.crisis = hit; go('crisis'); }
       else resolveYear();
+    };
+  }
+};
+
+// ------------------------------------------------- changing the strategy ---
+// Allowed, and costly, which is the only way it stays a decision. The cut is
+// one-off and recoverable through performance; the conviction money's view of a
+// manager who changes her mind is not. Measured: switching as a tactic loses
+// about half a million, switching to rescue an over-strict policy gains about a
+// million if you notice in the first year and nothing by the last.
+SCREENS.switch = {
+  html(){
+    return `<h1>Change what the fund stands for</h1>
+      <p class="lede">You promised <b>${esc(STRAT_NAME[S.policy.strategy]||'something')}</b>.
+        Changing it now costs you <b>${(M.SWITCH_CUT*100).toFixed(0)}%</b> of the fund,
+        immediately — those investors bought the old promise.</p>
+      <div class="note warn"><b>And it does not end there.</b> Conviction money discounts
+        a manager who changes her mind, every year from now on. A fund that rewrites its
+        principles twice is not running a strategy.</div>
+      <p class="task">You will choose the strategy again, set the threshold, and write
+        the prospectus afresh — the public has to be told.</p>
+      <div class="actions">
+        <button class="ghost" id="no">Keep the current policy</button>
+        <button id="yes">Change it</button></div>`;
+  },
+  wire(m){
+    m.querySelector('#no').onclick = () => go('decide');
+    m.querySelector('#yes').onclick = () => {
+      S.switching = true;               // the policy screens return here, not to the fee
+      go('strategy');
     };
   }
 };
@@ -587,6 +678,7 @@ function resolveYear(){
   S.fund.holdings = S.holdings; S.fund.fee = S.fee;
   S.fund.policy = S.policy; S.fund.overclaim = S.overclaim || 0;
   if (S.appeal) S.fund.appeal = S.appeal;
+  S.fund.switches = S.switches || 0;
   // 2027 is the authored year — the war ends, oil falls, sentiment recovers.
   // It has to be applied in play, not only in the end-of-game comparison, or
   // the game never runs the scenario it argues from.
@@ -632,7 +724,10 @@ SCREENS.result = {
       ['Scandals in the book', d.flows.scandal],
       ['The gap between words and holdings', d.flows.greenwashing],
       ['Concentration', d.flows.concentration],
-      ['What the prospectus promised', d.flows.pitch]].filter(([,v])=>Math.abs(v)>0.05);
+      ['What the prospectus promised', d.flows.pitch],
+      ['Investors who wanted the old strategy', d.flows.switched],
+      ['Conviction money, after the change of mind', d.flows.trust]]
+      .filter(([,v])=>Math.abs(v)>0.05);
     const prev = S.esgPrev, moved = prev==null ? null : d.esg - prev;
     return `<h1>${d.year}</h1>
       <p class="task">Where the money went.</p>
@@ -756,6 +851,15 @@ function connect(){
     if (isMgr() && mine.teamFlags) S.peerFlags = mine.teamFlags;
     // An analyst's fund result, written back the same way at the reveal.
     if (!isMgr() && mine.teamResult) S.teamResult = mine.teamResult;
+    if (!isMgr()) {
+      S.deskFull = !!mine.full;
+      if (mine.desk && mine.desk !== S.desk) S.desk = mine.desk;
+      const f = (S.board||[]).find(x => x.uid === S.teamId);
+      if (f) { S.analystsPresent = Math.max(1, (f.seats||1) - 1); S.fundName = f.name || S.fundName; }
+      // seated at last
+      if (S.screen === 'seat' && S.desk && !S.deskFull) go('brief');
+      if (S.screen === 'seat' && S.deskFull) go('team');
+    }
     if (st.stage==='reveal' && S.screen!=='final' && S.screen!=='teamfinal' && S.screen!=='join') {
       // The instructor ends the game. Before this the analysts had no ending at
       // all — they sat on "Tell her" while the manager saw the result alone.
@@ -770,7 +874,8 @@ function connect(){
 function publishMe(){
   if (!S.net) return;
   S.net.publish(S.role + '_' + (S.fundName||'g'), {
-    role:S.role, name:S.fundName, teamId:S.teamId, fee:S.fee, flags:S.flags,
+    role:S.role, name:S.fundName, teamId:S.teamId, joinedAt:S.joinedAt||null,
+    fee:S.fee, flags:S.flags,
     esg: S.fund ? M.portfolioESG(S.holdings, Math.min(5,S.year)) : null,
     year: S.year,                 // the control panel reads readiness off this
     policy:S.policy, holdings:S.holdings,

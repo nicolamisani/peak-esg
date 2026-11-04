@@ -145,3 +145,10 @@ input[type=range]{width:100%;accent-color:var(--green);height:44px}
 .bootfail .btn{display:inline-block;font-weight:600;text-decoration:none;
   background:var(--ink);color:#fff;border-radius:8px;padding:12px 18px;min-height:44px;line-height:20px}
 .bootfail a{color:var(--green)}
+
+/* the fund's name, always in the header */
+.rail .fund{font-weight:600;font-size:13px;color:var(--ink);
+  border-left:1px solid var(--rule-2);padding-left:11px;margin-left:-2px}
+/* a fund that cannot take another analyst */
+.choice.off{opacity:.45;cursor:not-allowed}
+.choice.off:hover{border-color:var(--rule)}

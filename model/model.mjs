@@ -7,8 +7,8 @@
 // problems findable before a class saw them.
 // =============================================================================
 
-import { UNIVERSE, ACTIVITIES } from '../data/universe.mjs?v=11040650';
-import { INDEX, YEARS, COMPRESSION, ENDINGS } from '../data/world.mjs?v=11040650';
+import { UNIVERSE, ACTIVITIES } from '../data/universe.mjs?v=11040700';
+import { INDEX, YEARS, COMPRESSION, ENDINGS } from '../data/world.mjs?v=11040700';
 
 // ---------------------------------------------------------------- constants --
 export const START_AUM   = 500;              // EUR m
@@ -18,6 +18,14 @@ export const FEE_START   = 0.0080;           // the opening peer median
 export const MAX_WEIGHT  = 3;
 export const MIN_HOLDINGS= 3;
 export const TRADES_YEAR = 2;                // position changes allowed per year
+// Changing what the fund stands for. Investors bought the old promise, and a
+// fixed slice of them leave when it changes — the figure the design settled on
+// is 10-15%. The cut is one-off and recoverable through performance; what is
+// not recoverable is the conviction money's view of a manager who changes her
+// mind, which is why SWITCH_TRUST rides on the same coefficient as policy
+// integrity (`c`). Return-driven money has c:0 and does not care at all.
+export const SWITCH_CUT   = 0.12;            // of assets, once, on the switch
+export const SWITCH_TRUST = 0.52;            // lasting, per switch, capped at 2
 export const AUM_FLOOR   = 0.20;             // of starting AUM, per segment
 
 export const DRAG = { severe: 20, moderate: 6 };   // pts of return, in the event year
@@ -171,7 +179,8 @@ export function newFund({ policy = null, fee = FEE_START } = {}) {
   const aum = {};
   SEGMENTS.forEach(s => { aum[s.id] = START_AUM * s.share; });
   return { aum, fee, holdings:{}, policy, overclaim:0, feesEarned:0,
-           crisisCredit:0, appeal:{ conv:0, main:0, retn:0 }, years:[] };
+           crisisCredit:0, appeal:{ conv:0, main:0, retn:0 },
+           switches:0, switchPending:false, years:[] };
 }
 
 export const totalAUM = f => SEGMENTS.reduce((s, g) => s + f.aum[g.id], 0);
@@ -232,11 +241,14 @@ export function playYear(fund, t, { peerFee = FEE_START, ending = null } = {}) {
       scandal:-s.e * expo,
       green:  -s.g * gap,
       conc:   -s.k * conc,
-      pitch:   s.m * (A[s.id] || 0) * decay
+      pitch:   s.m * (A[s.id] || 0) * decay,
+      trust:  -s.c * SWITCH_TRUST * Math.min(2, fund.switches || 0)
     };
     const flow = clamp(Object.values(comp).reduce((x, y) => x + y, 0), -0.35, 0.45);
     const floor = START_AUM * s.share * AUM_FLOOR;
-    aum[s.id] = Math.max(floor, afterMarket * (1 + flow));
+    // The one-off withdrawal, applied the year the strategy changed.
+    const cut = fund.switchPending ? SWITCH_CUT : 0;
+    aum[s.id] = Math.max(floor, afterMarket * (1 + flow) * (1 - cut));
     flowTotal += aum[s.id] - afterMarket;
     parts[s.id] = { comp, flow, from: fund.aum[s.id], afterMarket, to: aum[s.id] };
   }
@@ -253,13 +265,18 @@ export function playYear(fund, t, { peerFee = FEE_START, ending = null } = {}) {
     flows: { base: euros('base'), performance: euros('perf'), esg: euros('esg'),
              policy: euros('policy'), fee: euros('fee'),
              scandal: euros('scandal'), greenwashing: euros('green'),
-             concentration: euros('conc'), pitch: euros('pitch') },
+             concentration: euros('conc'), pitch: euros('pitch'),
+             trust: euros('trust'),
+             switched: fund.switchPending
+               ? -SEGMENTS.reduce((x,g)=>x + parts[g.id].afterMarket *
+                   (1 + parts[g.id].flow) * SWITCH_CUT, 0) : 0 },
     flowTotal, feeTake, ret: r, retIndex: rIdx, esg, strictness: strict, gap, expo,
     effN
   };
 
   return {
     fund: { ...fund, aum, feesEarned: fund.feesEarned + feeTake, crisisCredit: 0,
+            switchPending: false,        // charged once, in the year it happened
             years: [...fund.years, decomposition] },
     decomposition
   };

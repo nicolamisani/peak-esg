@@ -66,7 +66,8 @@ function fireNet(code) {
     fs.onSnapshot(fs.doc(db, 'sessions', code, 'groups', uid), d => {
       const v = d.data() || {};
       cache = { ...cache, mine: { aiPitch: v.aiPitch || null, aiCrisis: v.aiCrisis || null,
-                                  teamFlags: v.teamFlags || null, teamResult: v.teamResult || null } };
+                                  teamFlags: v.teamFlags || null, teamResult: v.teamResult || null,
+                                  desk: v.desk || null, full: !!v.full } };
       subs.forEach(f => f(cache)); });
     return fs;
   })();

@@ -1,15 +1,15 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 15:06 UTC
+// Peak ESG — the client   ·   published 2026-11-04 15:19 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11041506';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041506';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041506';
-import { NEWS, newsFor } from './data/news.mjs?v=11041506';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041506';
-import { makeNet } from './net.mjs?v=11041506';
+import * as M from './model/model.mjs?v=11041519';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041519';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041519';
+import { NEWS, newsFor } from './data/news.mjs?v=11041519';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041519';
+import { makeNet } from './net.mjs?v=11041519';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -26,7 +26,9 @@ const S = {
   reviewYear:0, reviewTo:null,     // which year's review, and where it leads
   holdings:{}, fund:null, lastResult:null,
   openCo:null, openSect:'prof', flags:{}, trades:0,
-  bot:[], botOpen:false, aside:null, peerFee:M.FEE_START
+  bot:[], botOpen:false, teamOpen:false, aside:null,
+  ejected:{},                  // {uid: name} the manager has removed
+  peerFee:M.FEE_START
 };
 const KEY = 'peakesg_me_v1';
 // A pristine copy of the opening state. Restoring a saved game is the one
@@ -39,7 +41,7 @@ function startClean(){
 }
 const save = () => { try{ localStorage.setItem(KEY, JSON.stringify({
   code:S.code, role:S.role, fundName:S.fundName, teamId:S.teamId, who:S.who,
-  policy:S.policy, policyText:S.policyText,
+  policy:S.policy, policyText:S.policyText, ejected:S.ejected,
   fee:S.fee, holdings:S.holdings, fund:S.fund, screen:S.screen,
   year:S.year, flags:S.flags, bot:S.bot })); }catch(e){} };
 const load = () => { try{ return JSON.parse(localStorage.getItem(KEY)) || null; }catch(e){ return null; } };
@@ -102,10 +104,15 @@ function crew(){
   const me = (S.who||'').trim();
   const tag = n => n && n === me ? `<b>${esc(n)}</b>` : esc(n || '—');
   const an = (r.analysts||[]).filter(Boolean);
-  return `<div class="crew"><span class="f">${esc(r.fund || S.fundName)}</span>
+  // The manager can open this to see who has actually joined and remove
+  // anybody who should not be there. A room of seventeen funds reading names
+  // out loud produces wrong-fund joins, and nothing else catches them.
+  return `<div class="crew${isMgr() ? ' tap' : ''}" ${isMgr() ? 'id="crew"' : ''}>
+    <span class="f">${esc(r.fund || S.fundName)}</span>
     <span>Managed by ${tag(r.manager)}</span>
     ${an.length ? `<span>Analysts: ${an.map(tag).join(', ')}</span>`
-                : `<span class="muted">No analysts yet</span>`}</div>`;
+                : `<span class="muted">No analysts yet</span>`}
+    ${isMgr() ? `<span class="manage">Manage</span>` : ''}</div>`;
 }
 function stepLabel(){
   const m = { intro:'how it works', join:'joining', brief:'the brief', strategy:'step 1 of 3 · strategy',
@@ -165,6 +172,32 @@ function botLog(){
   </div></div>`;
 }
 
+// --------------------------------------------------------- who is on the fund
+function teamSheet(){
+  const r = S.roster || {};
+  const team = r.team || [];
+  const out = Object.entries(S.ejected || {});
+  return `<div class="botlog" id="teamsheet"><div class="sheet">
+    <h2 style="margin-top:0">Who is on ${esc(r.fund || S.fundName || 'your fund')}</h2>
+    <p class="small">Check these are your three. Anyone who tapped the wrong fund can be
+      removed, and the desk they were holding frees up for the right person.</p>
+    ${team.length ? team.map(a => `<div class="co">
+      <div><div class="nm">${esc(a.who || 'Unnamed')}</div>
+        <div class="ind">${esc((DESKS[a.desk]||{}).name || 'seated')}</div></div>
+      <button class="ghost" data-eject="${esc(a.uid)}" data-nm="${esc(a.who||'Unnamed')}"
+        style="margin-left:auto;min-height:38px;padding:6px 14px">Remove</button></div>`).join('')
+      : `<div class="note">No analysts have joined yet.</div>`}
+    ${out.length ? `<h2>Removed</h2>
+      ${out.map(([uid, nm]) => `<div class="co">
+        <div><div class="nm">${esc(nm)}</div>
+          <div class="ind">cannot rejoin this fund</div></div>
+        <button class="ghost" data-unban="${esc(uid)}"
+          style="margin-left:auto;min-height:38px;padding:6px 14px">Allow back</button></div>`).join('')}`
+      : ''}
+    <div class="actions"><button class="ghost wide" id="closeteam">Close</button></div>
+  </div></div>`;
+}
+
 // ------------------------------------------------------------------ paint ---
 // A Firestore snapshot arrives whenever anybody on the fund touches anything,
 // and the old render() replaced document.body.innerHTML every time. Two
@@ -180,7 +213,8 @@ function render(){
   S.aside = null;                    // an aside belongs to one screen only
   const bodyHtml  = scr.html();      // building the screen is what sets it
   const railHtml  = rail();
-  const stripHtml = botStrip() + (S.botOpen ? botLog() : '');
+  const stripHtml = botStrip() + (S.botOpen ? botLog() : '')
+    + (S.teamOpen && isMgr() ? teamSheet() : '');
   const mainCls   = isMgr() ? 'wide' : '';
 
   // The header must stay a direct child of body: it is position:sticky, and a
@@ -225,6 +259,18 @@ function render(){
     }
     const cl = document.getElementById('closelog');
     if (cl) cl.onclick = () => { S.botOpen = false; paint(); };
+    const ct = document.getElementById('closeteam');
+    if (ct) ct.onclick = () => { S.teamOpen = false; paint(); };
+    wrap.querySelectorAll('[data-eject]').forEach(b => b.onclick = () => {
+      S.ejected = { ...(S.ejected||{}), [b.dataset.eject]: b.dataset.nm };
+      botSay('Head of Distribution',
+        `<b>${Hey()}I have taken ${esc(b.dataset.nm)} off the fund.</b> That desk is free again.`);
+      publishMe(); paint();
+    });
+    wrap.querySelectorAll('[data-unban]').forEach(b => b.onclick = () => {
+      const e = { ...(S.ejected||{}) }; delete e[b.dataset.unban]; S.ejected = e;
+      publishMe(); paint();
+    });
   }
 
   if (screenChanged) { DOM.screen = S.screen; window.scrollTo(0, 0); }
@@ -385,6 +431,11 @@ SCREENS.brief = {
 SCREENS.team = {
   html(){
     const funds = (S.board || []).filter(f => f.uid);
+    if (S.evictedFrom) return `<h1>You are not on that fund</h1>
+      <p class="lede">The manager of <b>${esc(S.evictedFrom)}</b> removed you \u2014 most likely
+        you tapped the wrong fund.</p>
+      <p class="task">Check with your group which fund is yours, then choose it below.</p>
+      <div class="actions"><button id="ok" class="wide">Choose a fund</button></div>`;
     if (S.deskFull) return `<h1>That fund is full</h1>
       <p class="lede"><b>${esc(S.fundName)}</b> already has its three analysts.</p>
       <p class="task">Join a different fund, or ask someone in the room to create one.</p>
@@ -408,6 +459,8 @@ SCREENS.team = {
       <div class="actions"><button id="n" class="wide" ${S.teamId?'':'disabled'}>That's mine</button></div>`;
   },
   wire(m){
+    const ok = m.querySelector('#ok');
+    if (ok) ok.onclick = () => { S.evictedFrom = null; paint(); };
     const b = m.querySelector('#back');
     if (b) b.onclick = () => { S.deskFull=false; S.teamId=null; S.fundName=''; publishMe(); paint(); };
     m.querySelectorAll('[data-u]').forEach(c=>c.onclick=()=>{
@@ -1242,6 +1295,14 @@ function connect(){
     if (!isMgr() && mine.teamResult) S.teamResult = mine.teamResult;
     if (mine.teamRoster) S.roster = mine.teamRoster;
     if (!isMgr()) {
+      // Removed by the manager. Let go of the fund so the picker is usable
+      // again, and say who did it — otherwise the screen simply empties.
+      if (mine.evicted && mine.evicted === S.teamId) {
+        const was = S.fundName;
+        S.teamId = null; S.fundName = ''; S.desk = null; S.joinedAt = null;
+        S.roster = null; S.evictedFrom = was;
+        publishMe(); go('team'); return;
+      }
       S.deskFull = !!mine.full;
       if (mine.desk && mine.desk !== S.desk) S.desk = mine.desk;
       const f = (S.board||[]).find(x => x.uid === S.teamId);
@@ -1284,7 +1345,7 @@ function publishMe(){
     esg: S.fund ? M.portfolioESG(S.holdings, Math.min(5,S.year)) : null,
     year: S.year,                 // the control panel reads readiness off this
     policy:S.policy, holdings:S.holdings,
-    policyText:S.policyText,
+    policyText:S.policyText, ejected:S.ejected||{},
     crisisText:S.crisisText||'', crisisYear:S.crisisYear||null,
     crisisEvent:S.crisisEvent||'', crisisCompany:S.crisisCompany||'',
     crisisWeight:S.crisisWeight||0, crisisOutside:!!S.crisisOutside,
@@ -1327,5 +1388,11 @@ catch (err) {
   console.error('Peak ESG — first paint failed; starting clean.', err);
   startClean(); paint();
 }
+// Delegated, because the header is rewritten whenever the roster changes and a
+// handler bound to the old node would go with it.
+document.addEventListener('click', e => {
+  const c = e.target.closest && e.target.closest('#crew');
+  if (c && isMgr()) { S.teamOpen = true; paint(); }
+});
 window.__peakBooted = true;              // the boot guard in index.html watches this
 window.PEAK = { S, M, go, advance, publishMe };  // for testing from the console

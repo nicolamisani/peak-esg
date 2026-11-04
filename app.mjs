@@ -1,15 +1,15 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 12:07 UTC
+// Peak ESG — the client   ·   published 2026-11-04 13:38 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11041207';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041207';
-import { INDEX, YEARS, MACRO, SCENARIO, ENDINGS } from './data/world.mjs?v=11041207';
-import { NEWS, newsFor } from './data/news.mjs?v=11041207';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041207';
-import { makeNet } from './net.mjs?v=11041207';
+import * as M from './model/model.mjs?v=11041338';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041338';
+import { INDEX, YEARS, MACRO, SCENARIO, ENDINGS } from './data/world.mjs?v=11041338';
+import { NEWS, newsFor } from './data/news.mjs?v=11041338';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041338';
+import { makeNet } from './net.mjs?v=11041338';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -25,7 +25,7 @@ const S = {
   policyText:'', pitchText:'', fee:M.FEE_START,
   holdings:{}, fund:null, lastResult:null,
   openCo:null, openSect:'prof', flags:{}, trades:0,
-  bot:[], botOpen:false, peerFee:M.FEE_START
+  bot:[], botOpen:false, confirmNew:false, peerFee:M.FEE_START
 };
 const KEY = 'peakesg_me_v1';
 // A pristine copy of the opening state. Restoring a saved game is the one
@@ -121,6 +121,10 @@ function botLog(){
     <h2 style="margin-top:0">Everything you have been told</h2>
     ${S.bot.slice().reverse().map(b=>`<div class="item">
       <div class="yr">${b.year} · ${esc(b.who)}</div><div>${b.msg}</div></div>`).join('')}
+    <p class="small" style="text-align:center;margin:16px 0 4px;opacity:.65">${
+      S.confirmNew
+        ? `This erases this device's game. <a href="#" id="newyes">Yes, start over</a> · <a href="#" id="newno">cancel</a>`
+        : `<a href="#" id="newask">Start a new game on this device</a>`}</p>
     <div class="actions"><button class="ghost wide" id="closelog">Close</button></div>
   </div></div>`;
 }
@@ -135,6 +139,10 @@ function render(){
   scr.wire && scr.wire(m);
   const b = $('#bot'); if (b) b.onclick = () => { S.botOpen = true; paint(); };
   const cl = $('#closelog'); if (cl) cl.onclick = () => { S.botOpen = false; paint(); };
+  // Two taps, because a mis-tap here would cost somebody their fund.
+  const ask = $('#newask'); if (ask) ask.onclick = e => { e.preventDefault(); S.confirmNew = true; paint(); };
+  const no  = $('#newno');  if (no)  no.onclick  = e => { e.preventDefault(); S.confirmNew = false; paint(); };
+  const yes = $('#newyes'); if (yes) yes.onclick = e => { e.preventDefault(); startClean(); paint(); };
   window.scrollTo(0,0);
 }
 // Never show nothing. A screen that throws gets an explanation and a way on,
@@ -218,7 +226,9 @@ SCREENS.join = {
     </div>
     <div class="actions"><button id="go" class="wide" ${
       S.role && S.code.length===4 && S.who.trim() ? '':'disabled'}>${
-      S.role==='analyst' ? 'Find my fund' : 'Start'}</button></div>`; },
+      S.role==='analyst' ? 'Find my fund' : 'Start'}</button></div>
+    <p class="small" style="text-align:center;margin-top:20px;opacity:.7">
+      Played on this device before? <a href="#" id="newgame">Start a new game</a>.</p>`; },
   wire(m){
     const boxes=[...m.querySelectorAll('.code input')];
     boxes.forEach((b,i)=>{ b.oninput=()=>{ b.value=b.value.replace(/\D/g,'');
@@ -231,6 +241,10 @@ SCREENS.join = {
       if (g) g.disabled = !(S.role && S.code.length===4 && S.who.trim()); };
     const wh=m.querySelector('#who'); if(wh) wh.oninput=()=>{ S.who=wh.value; ready(); };
     const fn=m.querySelector('#fname'); if(fn) fn.oninput=()=>{ S.fundName=fn.value; };
+    // Forgets whatever this device was carrying and comes straight back here,
+    // so nobody has to be told about ?fresh.
+    const ng=m.querySelector('#newgame');
+    if (ng) ng.onclick = e => { e.preventDefault(); startClean(); S.screen='join'; paint(); };
     ready();
     m.querySelector('#go').onclick=()=>{
       if (isMgr()) {

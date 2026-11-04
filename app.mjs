@@ -1,16 +1,16 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 20:18 UTC
+// Peak ESG — the client   ·   published 2026-11-04 20:40 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11042018';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11042018';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11042018';
-import { NEWS, newsFor } from './data/news.mjs?v=11042018';
-import { EPS, dossierAt } from './data/evolve.mjs?v=11042018';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11042018';
-import { makeNet } from './net.mjs?v=11042018';
+import * as M from './model/model.mjs?v=11042040';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11042040';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11042040';
+import { NEWS, newsFor } from './data/news.mjs?v=11042040';
+import { EPS, dossierAt } from './data/evolve.mjs?v=11042040';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11042040';
+import { makeNet } from './net.mjs?v=11042040';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -30,7 +30,7 @@ const S = {
   policy:{ strategy:null, excluded:[], rank:5, minScore:50 },
   policyText:'', fee:M.FEE_START,
   reviewYear:0, reviewTo:null,     // which year's review, and where it leads
-  holdings:{}, fund:null, lastResult:null,
+  holdings:{}, fund:null, lastResult:null, crisisLog:[],
   openCo:null, openSect:'prof', flags:{}, trades:0,
   bot:[], botOpen:false, teamOpen:false, aside:null,
   ejected:{},                  // {uid: name} the manager has removed
@@ -1198,6 +1198,143 @@ SCREENS.performance = {
   wire(m){ m.querySelector('#n').onclick = () => go('standings'); }
 };
 
+// --------------------------------------------------------- the whole run ---
+// Everything a team did over six years, in one object. The ending screen reads
+// it, the student's CSV is written from it, and it is published so the
+// instructor's export carries the same numbers.
+function runHistory(){
+  const years = (S.fund && S.fund.years) || [];
+  return years.map((d, i) => ({
+    year: YEARS[i],
+    ret: round2(d.ret), market: round2(d.retIndex),
+    start: round2(d.start), end: round2(d.end),
+    fees: round2(d.feeTake), esg: d.esg == null ? null : Math.round(d.esg),
+    scandal: round2((d.flows||{}).scandal || 0),
+    greenwashing: round2((d.flows||{}).greenwashing || 0),
+  }));
+}
+const round2 = x => x == null ? null : Math.round(x * 100) / 100;
+function runSummary(){
+  const h = runHistory();
+  const r = S.roster || {};
+  const log = S.crisisLog || [];
+  const board = (S.board || []).slice().sort((a,b)=>(b.fees||0)-(a.fees||0));
+  const place = board.findIndex(f => isMyFund(f));
+  const esgBoard = (S.board || []).filter(f => f.esg != null)
+                                  .sort((a,b)=>(b.esg||0)-(a.esg||0));
+  const esgPlace = esgBoard.findIndex(f => isMyFund(f));
+  const aum = S.fund ? M.totalAUM(S.fund) : 0;
+  const p = S.policy || {};
+  return {
+    fund: S.fundName || '', manager: r.manager ? (r.manager.who || S.who) : (S.who || ''),
+    analysts: (r.team || []).map(a => a.who || 'unnamed'),
+    strategy: STRAT_NAME[p.strategy] || p.strategy || '',
+    threshold: p.strategy === 'exclude' ? (p.excluded || []).join(' + ')
+             : p.strategy === 'best' ? `top ${p.rank} in industry`
+             : `minimum score ${p.minScore}`,
+    policyText: S.policyText || '',
+    fee: S.fee, policyChanges: S.switches || 0,
+    fees: S.fund ? S.fund.feesEarned : 0,
+    aum, start: M.START_AUM, growth: aum - M.START_AUM,
+    esg: S.fund ? M.portfolioESG(S.holdings, 5) : null,
+    place: place >= 0 ? place + 1 : null, of: board.length,
+    esgPlace: esgPlace >= 0 ? esgPlace + 1 : null,
+    scandals: log.length, answered: log.filter(c => c.answered).length,
+    greenwashing: round2(h.reduce((a, y) => a + (y.greenwashing || 0), 0)),
+    beatMarket: h.filter(y => y.ret > y.market).length, yearsPlayed: h.length,
+    holdings: Object.entries(S.holdings || {}).map(([id, w]) => ({
+      name: (co(id) || {}).name || id, industry: (co(id) || {}).industry || '', weight: w })),
+    history: h, crises: log,
+  };
+}
+// A file the team keeps. No server: the rows are built here and handed to the
+// browser as a download, which also means it still works with no network.
+function downloadCSV(){
+  const s = runSummary();
+  const cell = v => {
+    const t = String(v == null ? '' : v);
+    return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+  };
+  const row = (...c) => c.map(cell).join(',');
+  const out = [
+    row('Peak ESG', 'Bocconi 30296'),
+    row('Fund', s.fund), row('Fund manager', s.manager),
+    row('Analysts', s.analysts.join(' / ') || '(none)'),
+    '',
+    row('RESULT'),
+    row('Total fees earned (EUR m)', s.fees.toFixed(2)),
+    row('Place', s.place ? `${s.place} of ${s.of}` : ''),
+    row('Fund at the end (EUR m)', Math.round(s.aum)),
+    row('Change from EUR 500m', (s.growth >= 0 ? '+' : '') + Math.round(s.growth)),
+    row('Portfolio ESG score', s.esg == null ? '' : Math.round(s.esg)),
+    row('ESG place', s.esgPlace ? `${s.esgPlace} of ${s.of}` : ''),
+    row('Years beating the market', `${s.beatMarket} of ${s.yearsPlayed}`),
+    '',
+    row('WHAT THE FUND DID'),
+    row('Policy', s.strategy), row('How strict', s.threshold),
+    row('Fee charged', (s.fee * 100).toFixed(2) + '%'),
+    row('Times the policy changed', s.policyChanges),
+    row('Scandals faced', s.scandals),
+    row('Scandals answered', s.answered),
+    row('Money lost to the promise-portfolio gap (EUR m)', s.greenwashing.toFixed(2)),
+    row('Policy statement', s.policyText),
+    '',
+    row('FINAL PORTFOLIO'), row('Company', 'Industry', 'Weight'),
+    ...s.holdings.map(h => row(h.name, h.industry, h.weight + 'x')),
+    '',
+    row('YEAR BY YEAR'),
+    row('Year', 'Fund return %', 'Market return %', 'Fund start EUR m', 'Fund end EUR m',
+        'Fees EUR m', 'Portfolio ESG', 'Scandal cost EUR m', 'Greenwashing cost EUR m'),
+    ...s.history.map(y => row(y.year, y.ret, y.market, y.start, y.end, y.fees, y.esg,
+                              y.scandal, y.greenwashing)),
+  ];
+  if (s.crises.length) out.push('', row('SCANDALS'),
+    row('Year', 'Company', 'Outside the policy', 'Answered', 'What happened'),
+    ...s.crises.map(c => row(c.year, c.company, c.outside ? 'yes' : 'no',
+                             c.answered ? 'yes' : 'no', c.event)));
+  // The BOM is what makes Excel open a UTF-8 CSV without mangling the accents.
+  const blob = new Blob(['\uFEFF' + out.join('\r\n')], { type:'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (s.fund || 'peak-esg').replace(/[^\w]+/g, '-').toLowerCase() + '-peak-esg.csv';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+}
+
+function downloadAnalystCSV(){
+  const r = S.teamResult || {}, ro = S.roster || {};
+  const cell = v => { const t = String(v == null ? '' : v);
+    return /[",\n]/.test(t) ? '"' + t.replace(/"/g,'""') + '"' : t; };
+  const row = (...c) => c.map(cell).join(',');
+  const mine = myDesk().map(id => ({ c: co(id), w: (r.holdings||{})[id] || 0, f: !!S.flags[id] }));
+  const out = [
+    row('Peak ESG', 'Bocconi 30296'),
+    row('Fund', r.name || S.fundName || ''),
+    row('Analyst', S.who || ''),
+    row('Desk', (DESKS[S.desk] || {}).name || ''),
+    row('Fund manager', ro.manager ? (ro.manager.who || '') : ''),
+    row('Other analysts', (ro.team || []).map(a => a.who).filter(w => w && w !== S.who).join(' / ')),
+    '',
+    row('FUND RESULT'),
+    row('Total fees earned (EUR m)', (r.fees || 0).toFixed(2)),
+    row('Place', r.rank ? `${r.rank} of ${r.of}` : ''),
+    row('Portfolio ESG score', r.esg == null ? '' : Math.round(r.esg)),
+    row('ESG place', r.esgRank ? `${r.esgRank} of ${r.of}` : ''),
+    '',
+    row('MY FOUR COMPANIES'),
+    row('Company', 'Industry', 'I recommended it', 'The fund held it'),
+    ...mine.map(x => row(x.c.name, x.c.industry, x.f ? 'yes' : 'no',
+                         x.w ? `yes, ${x.w}x` : 'no')),
+  ];
+  const blob = new Blob(['\uFEFF' + out.join('\r\n')], { type:'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = ((r.name || 'peak-esg') + '-' + (S.who || 'analyst'))
+                 .replace(/[^\w]+/g,'-').toLowerCase() + '.csv';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+}
+
 // ----------------------------------------------------------- the podium ----
 // Third, then second, then first, then everyone: the instructor walks it from
 // the front of the room, three seconds a place, and every device turns over
@@ -1486,6 +1623,9 @@ SCREENS.crisis = {
       S.crisisText=text; S.crisisYear=YEARS[S.year]; S.crisisEvent=ev.note;
       S.crisisCompany=c.name; S.crisisWeight=weight;
       S.crisisOutside=!M.admits(S.policy,c);
+      S.crisisLog = [...(S.crisisLog||[]), { year:YEARS[S.year], company:c.name,
+        event:ev.note, weight, outside:!M.admits(S.policy,c), answered:!!text,
+        words: text ? text.split(/\s+/).filter(Boolean).length : 0 }];
       publishMe();
       const done = () => { resolveYear(); S.reviewYear = S.year; S.reviewTo = null; go('review'); };
       if (!text) { done(); return; }
@@ -1587,8 +1727,16 @@ SCREENS.teamfinal = {
       <div class="note">${
         held.length===0 ? 'The manager held none of your four. Analysts are judged on what gets bought.'
         : mine.some(x=>x.f && x.w) ? 'The manager bought something you had recommended. The credit for that is shared.'
-        : 'Nothing you recommended ended up in the book.'}</div>`;
-  }
+        : 'Nothing you recommended ended up in the book.'}</div>
+      <div class="actions" style="margin-top:22px">
+        <button id="csv" class="wide">Save my result as a file</button></div>
+      <p class="small" style="text-align:center">Your desk, what you recommended, and how the
+        fund finished, saved to this device.</p>`;
+  },
+  wire(m){ const b = m.querySelector('#csv');
+    if (b) b.onclick = () => { try { downloadAnalystCSV(); }
+      catch (e) { console.error('Peak ESG \u2014 could not write the file', e);
+                  b.textContent = 'Could not save the file'; } }; }
 };
 
 SCREENS.wait = {
@@ -1616,44 +1764,70 @@ SCREENS.final = {
       <p class="lede">This fund never opened, so there is nothing to report.</p>
       <div class="note">If that is wrong, your device may have lost its game. Nothing can be
         recovered now \u2014 but your fund\u2019s result is on the screen at the front of the room.</div>`;
-    // The live game already happened, crisis responses and all. Re-running it
-    // from scratch under another ending would also discard those, so the
-    // authored row would not match what the team actually earned. Instead take
-    // the real total and apply the DIFFERENCE each alternative ending makes,
-    // measured on a like-for-like replay. The authored row is then exact.
-    const base = { holdings:S.holdings, policy:S.policy, fee:S.fee,
-                   overclaim:S.overclaim||0, appeal:S.appeal||null };
-    const ref  = M.runUnderEnding(base,'authored').feesEarned;
-    const live = S.fund.feesEarned;
-    const rows = Object.entries(ENDINGS).map(([k,e])=>({ k, e,
-      fees: k==='authored' ? live : live + (M.runUnderEnding(base,k).feesEarned - ref) }));
-    const esg = M.portfolioESG(S.holdings,5);
-    // Four identical figures under four different headings reads as a broken
-    // screen, and it is reachable two ways: a fund that never bought anything
-    // (the world cannot move a portfolio that does not exist) and a fund whose
-    // assets collapsed to the floor, where the ending has almost nothing left
-    // to act on. The second is the interesting one and was invisible, because
-    // a real spread of EUR 0.05m prints as four of the same number.
-    const spread = Math.max(...rows.map(r => r.fees)) - Math.min(...rows.map(r => r.fees));
-    const nHeld = Object.keys(S.holdings).length;
+    const s = runSummary();
+    const up = s.growth >= 0;
+    const line = (k, v, cls) => `<div class="row"><span>${k}</span>
+      <span class="amt${cls ? ' ' + cls : ''}">${v}</span></div>`;
     return `<h1>Six years on</h1>
-      <div class="big">${eur(S.fund.feesEarned)}</div>
-      <div class="small">total fees earned over the six years — your score</div>
-      <h2>The same fund under three other endings</h2>
-      <p class="small">Our 2027 is a scenario, not a forecast. These are what your fund
-        would have earned if it had gone differently.</p>
-      <div class="decomp">${rows.map(r=>`<div class="row"><span>${esc(r.e.label)}</span>
-        <span class="amt">${eur(r.fees)}</span></div>`).join('')}</div>
-      ${spread < 0.1 ? `<div class="note warn"><b>All four are the same.</b> ${nHeld === 0
-          ? 'This fund never bought anything, so there was no portfolio for the world to move. Whatever 2027 did, it did it to somebody else.'
-          : 'By 2027 the fund had shrunk to the floor investors will not go below, and a fund that small has almost nothing left for the market to act on. The ending stopped mattering long before it arrived.'}</div>` : ''}
-      <div class="note info"><b>Portfolio ESG score: ${esg.toFixed(0)}.</b>
-        You were not scored on this. Every fund's is about to go on the board.</div>
-      ${spread < 0.1 ? '' : `<div class="note">${rows[0].fees >= Math.max(...rows.map(r=>r.fees)) - 0.5
-        ? 'Your fund did as well or better under every ending, so the result did not depend on guessing which one would happen.'
-        : `Under the best of the other three you would have earned ${eur(Math.max(...rows.slice(1).map(r=>r.fees)))};
-           under the worst, ${eur(Math.min(...rows.slice(1).map(r=>r.fees)))}. Your result depended on which future turned out to be true.`}</div>`}`;
-  }
+      <p class="lede">${esc(s.fund)}${s.place ? ` \u2014 ${ord(s.place)} of ${s.of}` : ''}</p>
+      <div class="big">${eur(s.fees)}</div>
+      <div class="small">total fees earned over the six years \u2014 your score</div>
+
+      <h2>Who ran it</h2>
+      <div class="decomp">
+        ${line('Fund manager', esc(s.manager || 'unnamed'))}
+        ${s.analysts.length
+          ? s.analysts.map((a, i) => line(i ? '' : 'Analysts', esc(a))).join('')
+          : line('Analysts', '<span class="small">none joined</span>')}
+      </div>
+
+      <h2>Where the fund ended</h2>
+      <div class="decomp">
+        ${line('Fund at the end', eur(s.aum))}
+        ${line(`Change from ${eur(s.start)}`, (up ? '+' : '') + eur(s.growth), up ? 'pos' : 'neg')}
+        ${line('Portfolio ESG score', `${s.esg == null ? '\u2014' : Math.round(s.esg)} out of 100`
+               + (s.esgPlace ? ` <span class="small">\u00b7 ${ord(s.esgPlace)} of ${s.of}</span>` : ''))}
+        ${line('Years you beat the market', `${s.beatMarket} of ${s.yearsPlayed}`)}
+      </div>
+
+      <h2>What the fund did</h2>
+      <div class="decomp">
+        ${line('Policy', esc(s.strategy))}
+        ${line('How strict', esc(s.threshold))}
+        ${line('Fee charged', pct(s.fee))}
+        ${line('Times you changed the policy', s.policyChanges)}
+        ${line('Scandals you had to answer for', s.scandals
+            ? `${s.scandals} <span class="small">\u00b7 ${s.answered} answered</span>` : 'none')}
+        ${line('Money lost to the gap between promise and portfolio', eur(s.greenwashing),
+               s.greenwashing < 0 ? 'neg' : '')}
+      </div>
+
+      <h2>What you owned at the end</h2>
+      <div class="decomp">${s.holdings.length
+        ? s.holdings.map(h => line(esc(h.name) + ` <span class="small">${esc(h.industry)}</span>`,
+                                   h.weight + '\u00d7')).join('')
+        : line('Nothing', '')}</div>
+
+      ${s.policyText ? `<h2>The policy you wrote</h2>
+        <div class="note"><i>${esc(s.policyText)}</i></div>` : ''}
+
+      <h2>Year by year</h2>
+      <div class="decomp">
+        <div class="row stage"><span>Year</span><span>fund / market</span></div>
+        ${s.history.map(y => `<div class="row"><span>${y.year}</span>
+          <span class="amt ${y.ret >= y.market ? 'pos' : 'neg'}">${pc(y.ret)}
+            <span class="small">vs ${pc(y.market)}</span></span></div>`).join('')}
+      </div>
+
+      <div class="actions" style="margin-top:22px">
+        <button id="csv" class="wide">Save our result as a file</button></div>
+      <p class="small" style="text-align:center">A spreadsheet of everything above, including
+        every year and every scandal, saved to this device.</p>`;
+  },
+  wire(m){ const b = m.querySelector('#csv');
+    if (b) b.onclick = () => { try { downloadCSV(); }
+      catch (e) { console.error('Peak ESG \u2014 could not write the file', e);
+                  b.textContent = 'Could not save the file'; } }; }
 };
 
 // =============================================================================
@@ -1788,7 +1962,12 @@ function publishMe(){
     // The analysts' end-of-year screen is built from these: they have no fund
     // object of their own, so the manager's numbers travel through the worker.
     ret: S.lastResult ? S.lastResult.ret : null,
-    yearFees: S.lastResult ? S.lastResult.feeTake : null });
+    yearFees: S.lastResult ? S.lastResult.feeTake : null,
+    // The whole run, for the instructor's export. Only the manager holds a
+    // fund object, so only she has one to send.
+    history: S.role === 'manager' ? runHistory() : [],
+    crisisLog: S.crisisLog || [],
+    switches: S.switches || 0 });
   save();
 }
 // Offline only; in a real session the instructor runs the year. The last of

@@ -1,15 +1,15 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 17:16 UTC
+// Peak ESG — the client   ·   published 2026-11-04 17:44 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11041716';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041716';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041716';
-import { NEWS, newsFor } from './data/news.mjs?v=11041716';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041716';
-import { makeNet } from './net.mjs?v=11041716';
+import * as M from './model/model.mjs?v=11041744';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041744';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041744';
+import { NEWS, newsFor } from './data/news.mjs?v=11041744';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041744';
+import { makeNet } from './net.mjs?v=11041744';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -76,6 +76,12 @@ function recNote(id){
   return `<div class="rec">${who ? who + ' recommended it' : 'Recommended'}</div>`;
 }
 const myDesk = () => deskFor(S.desk, S.analystsPresent || 3);
+// The last year that has actually finished. During `decide` and `running` the
+// current year has NOT happened yet, so an analyst must not see its return or
+// its re-scored rating: that is next year's answer, handed over before the
+// decision it would decide. Repairing the dead `phase === 'play'` test opened
+// this leak, which the bug had been hiding by showing nothing at all.
+const lastDone = () => (S.phase === 'results' || S.phase === 'reveal') ? S.year : S.year - 1;
 const myName = () => (S.who || '').trim();
 // Both heads open by naming you. A line addressed to nobody in particular is
 // read by nobody in particular, and this bar is the only voice in the game.
@@ -509,8 +515,9 @@ SCREENS.seat = {
 SCREENS.desk = {
   html(){
     const ids = myDesk();
-    const playing = S.phase==='play';
-    const yr = playing ? YEARS[S.year] : 2021;
+    const t = lastDone();
+    const playing = S.phase !== 'setup' && t >= 0;
+    const yr = playing ? YEARS[t] : 2021;
     return `<h1>Your desk</h1>
       <p class="task">Tap a company to open its dossier. The score is one rating agency's opinion.</p>
       ${playing ? `<div class="colhead"><span class="c2">${yr} return</span><span class="c1">ESG score</span></div>`
@@ -518,13 +525,13 @@ SCREENS.desk = {
       ${ids.map(id=>{ const c=co(id); const f=S.flags[id];
         // The score moves with events, so showing the 2021 number all game
         // would hide the one thing an analyst is meant to be watching.
-        const sc = playing ? c.esg[S.year] : c.esg0;
+        const sc = playing ? c.esg[t] : c.esg0;
         const d  = playing ? sc - c.esg0 : 0;
         // M.ret is the only place a company's return is decided. Reading
         // excess + index straight off the data skipped the demeaning, the
         // compression, the authored 2027 and the event drag, so the number on
         // the analyst's desk did not match what the portfolio actually earned.
-        const r  = playing ? M.ret(c, S.year, 'authored') : null;
+        const r  = playing ? M.ret(c, t, 'authored') : null;
         return `<div class="co" data-id="${id}">
           <div><div class="nm">${esc(c.name)}</div>
           <div class="ind">${esc(c.industry)} · ${esc(c.region)}${
@@ -591,7 +598,8 @@ SCREENS.dossier = {
       <div class="kv"><span class="k">Chief executive</span><span class="v">${esc(c.governance.ceoChange)}</span></div>
       <div class="kv"><span class="k">Largest holder</span><span class="v">${esc(c.governance.holder)}</span></div>`;
     if (s==='news'){
-      const upto = S.phase==='play' ? YEARS[S.year] : 2021;
+      // Same rule in the dossier: news only up to the last finished year.
+      const upto = lastDone() >= 0 ? YEARS[lastDone()] : 2021;
       const items = NEWS[c.id].filter(n=>n.y<=upto);
       body = (c.media2021?`<p class="small">${esc(c.media2021)}</p>`:'') +
         (items.length ? items.slice().reverse().map(n=>`<div class="kv" style="display:block">
@@ -796,7 +804,8 @@ SCREENS.allocate = {
     m.querySelector('#n').onclick=()=>{
       publishMe();
       const st = S.net ? S.net.session() : null;
-      if (st && st.stage === 'play') { S.year = st.year || 0; S.trades = 0; go('decide'); }
+      if (st && (st.stage === 'decide' || st.stage === 'running')) {
+        S.year = st.year || 0; S.trades = 0; go(st.stage === 'running' ? 'running' : 'decide'); }
       else go('open');
     };
   }

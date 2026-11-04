@@ -78,9 +78,23 @@ function fireNet(code) {
     async onState(f){ subs.push(f); await ready; f(cache); },
     session(){ return cache; },
     async setSession(){ /* only the instructor's worker writes the session */ },
+    // `peak` is the whole of this device's state and must be REPLACED, not
+    // merged. setDoc(..., {merge:true}) deep-merges maps, so a key that
+    // disappears from the value never disappears from the document: a company
+    // the manager sold stayed in her published holdings for the rest of the
+    // game, and with it the leaderboard's ESG score, the holdings her analysts
+    // were shown, and what the assessor judged her policy against. The same
+    // trap was fixed in the worker's put() and missed here.
+    //
+    // updateDoc replaces a map field outright. It throws when the document
+    // does not exist yet, which is exactly the first publish.
     async publish(gid, doc){ const fs = await ready;
-      await fs.setDoc(fs.doc(db, 'sessions', code, 'groups', uid),
-        { ownerUid: uid, submitted: false, score: null, peak: doc }, { merge: true }); },
+      const ref = fs.doc(db, 'sessions', code, 'groups', uid);
+      try { await fs.updateDoc(ref, { peak: doc }); }
+      catch (e) {
+        await fs.setDoc(ref, { ownerUid: uid, submitted: false, score: null, peak: doc },
+                        { merge: true });
+      } },
     groups(){ return (cache.board || []).reduce((o,f)=>(o[f.id]=f,o),{}); },
     peerFee(fallback){ const g = (cache.board || []).filter(x=>x && x.fee);
       if (!g.length) return fallback;

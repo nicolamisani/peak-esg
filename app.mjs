@@ -1,28 +1,30 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 07:00 UTC
+// Peak ESG — the client   ·   published 2026-11-04 07:07 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11040700';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11040700';
-import { INDEX, YEARS, MACRO, SCENARIO, ENDINGS } from './data/world.mjs?v=11040700';
-import { NEWS, newsFor } from './data/news.mjs?v=11040700';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11040700';
-import { makeNet } from './net.mjs?v=11040700';
+import * as M from './model/model.mjs?v=11040707';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11040707';
+import { INDEX, YEARS, MACRO, SCENARIO, ENDINGS } from './data/world.mjs?v=11040707';
+import { NEWS, newsFor } from './data/news.mjs?v=11040707';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11040707';
+import { makeNet } from './net.mjs?v=11040707';
 
 // ------------------------------------------------------------------ state ---
 const S = {
-  code:'', role:null, fundName:'', screen:'join', net:null,
+  code:'', role:null, fundName:'', screen:'intro', net:null,
   teamId:null,                 // the manager's uid — what makes four devices a fund
   switches:0, switching:false,
+  who:'',                      // the player's own name, as they typed it
+  roster:null,                 // who else is on this fund, from the worker
   desk:null,                   // a1/a2/a3, assigned by the worker in join order
   analystsPresent:3,
   year:0, phase:'setup',
   policy:{ strategy:null, excluded:[], rank:5, minScore:50 },
   policyText:'', pitchText:'', fee:M.FEE_START,
   holdings:{}, fund:null, lastResult:null,
-  openCo:null, openSect:'fin', flags:{}, trades:0,
+  openCo:null, openSect:'prof', flags:{}, trades:0,
   bot:[], botOpen:false, peerFee:M.FEE_START
 };
 const KEY = 'peakesg_me_v1';
@@ -35,7 +37,7 @@ function startClean(){
   Object.assign(S, JSON.parse(JSON.stringify(FRESH)));
 }
 const save = () => { try{ localStorage.setItem(KEY, JSON.stringify({
-  code:S.code, role:S.role, fundName:S.fundName, teamId:S.teamId,
+  code:S.code, role:S.role, fundName:S.fundName, teamId:S.teamId, who:S.who,
   policy:S.policy, policyText:S.policyText,
   pitchText:S.pitchText, fee:S.fee, holdings:S.holdings, fund:S.fund, screen:S.screen,
   year:S.year, flags:S.flags, bot:S.bot })); }catch(e){} };
@@ -69,16 +71,26 @@ function rail() {
   const where = playing ? `${YEARS[S.year]} · year ${S.year+1} of 6` : stepLabel();
   const left = S.countdownEnds ? Math.max(0, Math.round((S.countdownEnds - Date.now())/1000)) : 0;
   const cd = left ? `<span class="clock">${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}</span>` : '';
-  const who = S.fundName
-    ? `<span class="fund">${esc(S.fundName)}${S.desk ? ' · ' + DESKS[S.desk].name : isMgr() ? ' · manager' : ''}</span>`
-    : '';
-  return `<div class="rail">
+  return `<header class="top"><div class="rail">
     <span class="mark">${MARK} Peak <span class="esg">ESG</span></span>
-    ${who}<span class="where">${esc(where)}</span>${cd}
-    <span class="dots">${dots}</span></div>`;
+    <span class="where">${esc(where)}</span>${cd}
+    <span class="dots">${dots}</span></div>${crew()}</header>`;
+}
+// Who is on this fund, under the rail, on every screen. The player's own name
+// is marked so four people round one laptop can tell whose screen they are on.
+function crew(){
+  const r = S.roster;
+  if (!r || !S.fundName) return '';
+  const me = (S.who||'').trim();
+  const tag = n => n && n === me ? `<b>${esc(n)}</b>` : esc(n || '—');
+  const an = (r.analysts||[]).filter(Boolean);
+  return `<div class="crew"><span class="f">${esc(r.fund || S.fundName)}</span>
+    <span>Managed by ${tag(r.manager)}</span>
+    ${an.length ? `<span>Analysts: ${an.map(tag).join(', ')}</span>`
+                : `<span class="muted">No analysts yet</span>`}</div>`;
 }
 function stepLabel(){
-  const m = { join:'joining', brief:'the brief', strategy:'step 1 of 4 · strategy',
+  const m = { intro:'how it works', join:'joining', brief:'the brief', strategy:'step 1 of 4 · strategy',
     threshold:'step 2 of 4 · policy', fee:'step 3 of 4 · price',
     pitch:'step 4 of 4 · prospectus', wait:'waiting', desk:'your desk',
     dossier:'your desk', allocate:'the portfolio',
@@ -150,12 +162,43 @@ const go = s => { S.screen = s; save(); paint(); };
 // =============================================================================
 const SCREENS = {};
 
+// --------------------------------------------------------------- the brief --
+// Read before the code is asked for. Nobody absorbs rules while four people are
+// trying to type the same four digits, and the pattern is proven in Zombies and
+// Unicorns: one page, headings you can skim, one button out.
+const HOWTO = [
+  ['It is January 2022, and you are launching an ESG fund',
+   'Last year saw a record inflow of money into sustainable funds. Is ESG at its peak? You have been given the job of finding out, and five years to show your boss she was right to trust you.'],
+  ['You are judged on the fees you earn, not the returns you make',
+   'Cumulative management fees — a percentage of the assets you are managing, every year. That is the real objective of an asset manager, and it means growing the fund matters as much as picking well.'],
+  ['Four of you to a fund, and none of you can see the whole thing',
+   'One of you creates the fund and runs it. The other three are analysts, and each gets four companies to research. <b>The manager is shown no company information at all</b> — not a name, not a score, nothing.'],
+  ['So the game is the conversation',
+   'The analysts read; the manager decides. Nothing reaches her except what you say out loud. Anything that lets one of you succeed without talking to the others would be a mistake in the design, not a shortcut.'],
+  ['Decide what the fund stands for, and how strictly',
+   'Exclude activities, demand companies rank near the top of their industry, or set a minimum ESG score. Strict policies shut you out of winners; loose ones leave you open to the charge that the label means nothing.'],
+  ['What you promise in public is held against what you hold',
+   'You write a prospectus. Good copy brings money in — but claim more than the portfolio delivers and the gap will be found, and it makes every later scandal worse.'],
+  ['Six years, paced from the front of the room',
+   'Each year brings news, returns, and money flowing in or out. You can change your fee, trade a little, and even change what the fund stands for — though investors who bought the old promise will leave.'],
+  ['One warning, and it is the point of the whole thing',
+   'Every company shows you three years of past performance. It is real, it is prominent, and it is not a guide to what happens next. If you take nothing else from this, take that.'],
+];
+SCREENS.intro = {
+  html(){ return `<h1>Peak ESG</h1>
+    <p class="lede">${esc(SCENARIO)}</p>
+    <h2>How it works</h2>
+    ${HOWTO.map(([h,p])=>`<div class="sect" style="margin-bottom:12px">
+      <b>${esc(h)}</b><div style="margin-top:3px">${p}</div></div>`).join('')}
+    <div class="actions"><button id="n" class="wide">I'm in</button></div>`; },
+  wire(m){ m.querySelector('#n').onclick=()=>go('join'); }
+};
+
 // ------------------------------------------------------------------- join ---
 SCREENS.join = {
   html(){ return `
-    <h1>Peak ESG</h1>
-    <p class="lede">${esc(SCENARIO)}</p>
-    <h2>Join</h2>
+    <h1>Join the game</h1>
+    <h2>The code on the screen at the front</h2>
     <div class="code">${[0,1,2,3].map(i=>`<input inputmode="numeric" maxlength="1" data-i="${i}" value="${esc(S.code[i]||'')}">`).join('')}</div>
     <p class="task">Everyone in the room types the same four digits — your group is chosen next.</p>
     <h2>What are you doing?</h2>
@@ -163,22 +206,32 @@ SCREENS.join = {
       ${Object.entries(ROLES).map(([k,r])=>`<div class="choice${S.role===k?' sel':''}" data-r="${k}">
         <div class="lbl">${esc(r.name)}</div><div class="desc">${esc(r.blurb)}</div></div>`).join('')}
     </div>
+    <div id="whoRow" class="${S.role?'':'hidden'}">
+      <h2>What shall we call you?</h2>
+      <input type="text" id="who" maxlength="24" placeholder="Sarah" value="${esc(S.who)}">
+      <div class="small">Your team will see this. A first name or a nickname — whatever you like.</div>
+    </div>
     <div id="nameRow" class="${S.role==='manager'?'':'hidden'}">
       <h2>Name the fund</h2>
       <input type="text" id="fname" maxlength="28" placeholder="Verde Capital" value="${esc(S.fundName)}">
       <div class="small">Your analysts will look for this name, so say it out loud.</div>
     </div>
-    <div class="actions"><button id="go" class="wide" ${S.role&&S.code.length===4?'':'disabled'}>${
+    <div class="actions"><button id="go" class="wide" ${
+      S.role && S.code.length===4 && S.who.trim() ? '':'disabled'}>${
       S.role==='analyst' ? 'Find my fund' : 'Start'}</button></div>`; },
   wire(m){
     const boxes=[...m.querySelectorAll('.code input')];
     boxes.forEach((b,i)=>{ b.oninput=()=>{ b.value=b.value.replace(/\D/g,'');
       S.code = boxes.map(x=>x.value).join(''); if(b.value&&i<3)boxes[i+1].focus();
-      $('#go').disabled = !(S.role&&S.code.length===4); };
+      ready(); };
       b.onkeydown=e=>{ if(e.key==='Backspace'&&!b.value&&i>0)boxes[i-1].focus(); }; });
     m.querySelectorAll('[data-r]').forEach(c=>c.onclick=()=>{
       S.role=c.dataset.r; paint(); });
+    const ready = () => { const g=$('#go');
+      if (g) g.disabled = !(S.role && S.code.length===4 && S.who.trim()); };
+    const wh=m.querySelector('#who'); if(wh) wh.oninput=()=>{ S.who=wh.value; ready(); };
     const fn=m.querySelector('#fname'); if(fn) fn.oninput=()=>{ S.fundName=fn.value; };
+    ready();
     m.querySelector('#go').onclick=()=>{
       if (isMgr()) {
         // The manager IS the fund: her device creates the group document every
@@ -298,13 +351,15 @@ SCREENS.desk = {
         Three of your four will turn out to be nothing like their score suggests.</div>`;
   },
   wire(m){ m.querySelectorAll('[data-id]').forEach(r=>r.onclick=()=>{
-    S.openCo=r.dataset.id; S.openSect='fin'; go('dossier'); }); }
+    S.openCo=r.dataset.id; S.openSect='prof'; go('dossier'); }); }
 };
 
 const SECTIONS = [
-  ['fin','Financial'], ['esg','ESG'], ['pol','Policies'],
+  ['prof','Profile'], ['fin','Financial'], ['esg','ESG'], ['pol','Policies'],
   ['ngo','NGO'], ['gov','Governance'], ['news','Media']
 ];
+const FACT_LABEL = { ceo:'Chief executive', employees:'Employees', founded:'Founded',
+                     hq:'Headquarters', revenue:'Revenue', listed:'Listed' };
 
 SCREENS.dossier = {
   html(){
@@ -316,6 +371,15 @@ SCREENS.dossier = {
           stroke-linejoin="round" stroke-linecap="round"/>
         <line x1="2" y1="49" x2="122" y2="49" stroke="var(--rule-2)" stroke-width="1"/></svg>`; })();
     let body='';
+    // What a screener would show you first: what the company actually does, in
+    // prose, before any number. Several of these carry a planted signal in
+    // plain sight — a subsidiary, a percentage, a claim under review.
+    if (s==='prof') body = `
+      <p>${esc(c.profile)}</p>
+      <h2 style="margin-top:18px">About ${esc(c.name)}</h2>
+      <div class="kv"><span class="k">Industry</span><span class="v">${esc(c.industry)}</span></div>
+      ${Object.entries(c.facts||{}).map(([k,v])=>
+        `<div class="kv"><span class="k">${esc(FACT_LABEL[k]||k)}</span><span class="v">${esc(v)}</span></div>`).join('')}`;
     if (s==='fin') body = `
       <div class="small" style="margin-bottom:2px">Share price, 2019 to 2021</div>
       ${spark}<div style="font-family:var(--mono);font-weight:600;font-size:19px">${esc(c.chart3y)} over three years</div>
@@ -851,6 +915,7 @@ function connect(){
     if (isMgr() && mine.teamFlags) S.peerFlags = mine.teamFlags;
     // An analyst's fund result, written back the same way at the reveal.
     if (!isMgr() && mine.teamResult) S.teamResult = mine.teamResult;
+    if (mine.teamRoster) S.roster = mine.teamRoster;
     if (!isMgr()) {
       S.deskFull = !!mine.full;
       if (mine.desk && mine.desk !== S.desk) S.desk = mine.desk;
@@ -875,6 +940,7 @@ function publishMe(){
   if (!S.net) return;
   S.net.publish(S.role + '_' + (S.fundName||'g'), {
     role:S.role, name:S.fundName, teamId:S.teamId, joinedAt:S.joinedAt||null,
+    who: (S.who||'').slice(0,24),
     fee:S.fee, flags:S.flags,
     esg: S.fund ? M.portfolioESG(S.holdings, Math.min(5,S.year)) : null,
     year: S.year,                 // the control panel reads readiness off this

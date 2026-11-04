@@ -33,6 +33,8 @@ export const UNIVERSE = [
 // ---------------------------------------------------------------- DEFENCE ---
 { id:'DEF', name:'Hartline Systems', industry:'Defence', region:'Europe',
   blurb:'Air defence, naval electronics and guided systems for European states.',
+  profile:'Hartline Systems SA designs air-defence radar, naval combat electronics and guided-weapon systems for European states and allied export customers. Roughly 70% of revenue comes from government contracts, much of it on multi-year framework awards. The group runs three divisions — Marine, Precision Guidance and Space — the second of which assembles guidance sections for munitions at a plant in Slovakia. Order intake has outpaced revenue every year since 2019.',
+  facts:{ ceo:'Hélène Marchand', employees:'81,400', founded:'1968', hq:'Paris, France', revenue:'€18.2bn', listed:'Euronext Paris' },
   cousin:'Thales', apple:'bad-hidden', conf:'m',
   esg0:58, rank:'3rd of 24', pe:16.8, chart:[100,104,112], chart3y:'+12%',
   activities:['weapons'],
@@ -54,6 +56,8 @@ export const UNIVERSE = [
 // ---------------------------------------------------------------- TOBACCO ---
 { id:'TOB', name:'Brightleaf Group', industry:'Tobacco', region:'Europe',
   blurb:'Cigarettes and next-generation nicotine products in 120 markets.',
+  profile:'Brightleaf Group plc manufactures and sells cigarettes, fine-cut tobacco and heated-tobacco and vapour products across roughly 120 markets. Combustible products still generate about 83% of revenue. The company reports one of the strongest governance and disclosure profiles in European consumer goods, and has committed to a smokeless-majority revenue mix, without naming a year. Volumes decline in most developed markets and are offset by price.',
+  facts:{ ceo:'Gerard Obi', employees:'52,000', founded:'1902', hq:'London, United Kingdom', revenue:'€27.4bn', listed:'London' },
   cousin:'BAT / Imperial Brands', apple:'bad-obvious', conf:'m',
   esg0:68, rank:'1st of 11', pe:9.2, chart:[100,92,101], chart3y:'+1%',
   activities:['tobacco'],
@@ -71,6 +75,8 @@ export const UNIVERSE = [
 // ------------------------------------------------------------- OIL AND GAS ---
 { id:'OIL', name:'Calder Energy', industry:'Oil and gas', region:'Europe',
   blurb:'Integrated oil and gas with a stated pivot to low-carbon energy.',
+  profile:'Calder Energy ASA is an integrated oil and gas producer with upstream operations in the North Sea, West Africa and the Gulf of Mexico, plus refining and a retail network. In 2020 it announced a strategy to cut oil and gas output 40% by 2030 and to build 50 GW of renewable capacity. Low-carbon lines accounted for about 4% of capital expenditure last year.',
+  facts:{ ceo:'Stefan Lunde', employees:'63,800', founded:'1909', hq:'Stavanger, Norway', revenue:'€141bn', listed:'Oslo, London' },
   cousin:'BP', apple:'bad-obvious', conf:'m',
   esg0:54, rank:'4th of 31', pe:11.4, chart:[100,61,84], chart3y:'−16%',
   activities:['fossilExtraction'],
@@ -90,6 +96,8 @@ export const UNIVERSE = [
 // ---------------------------------------------------------------- UTILITY ---
 { id:'UTI', name:'Verenda Power', industry:'Utilities', region:'Europe',
   blurb:'Regulated networks and 24 GW of wind and solar generation.',
+  profile:'Verenda Power SA operates regulated electricity networks in four European countries and owns 24 GW of wind and solar generation, with a further 9 GW under construction. About 60% of operating profit comes from regulated network assets, which earn a set return and are therefore sensitive to the cost of debt. The group has no coal or gas generation and has not since 2019.',
+  facts:{ ceo:'Pilar Cuesta', employees:'39,200', founded:'1944', hq:'Bilbao, Spain', revenue:'€39.1bn', listed:'Madrid' },
   cousin:'Iberdrola', apple:'good-obvious', conf:'m',
   esg0:81, rank:'2nd of 44', pe:17.9, chart:[100,131,148], chart3y:'+48%',
   activities:[],
@@ -107,6 +115,8 @@ export const UNIVERSE = [
 // ---------------------------------------------------------------- BANKING ---
 { id:'BNK', name:'Meridian Banque', industry:'Banking', region:'Europe',
   blurb:'Universal bank: retail, corporate lending and project finance.',
+  profile:'Meridian Banque SA is a universal bank with retail networks in three European markets and a corporate and investment bank active in project and commodity finance. Its own operations have been carbon-neutral since 2017 and it has issued €14bn of green bonds. Energy lending is around 6% of the loan book, and the bank publishes absolute financed emissions for power generation but not yet for oil and gas.',
+  facts:{ ceo:'Antoine Kessler', employees:'188,000', founded:'1848', hq:'Brussels, Belgium', revenue:'€46.2bn', listed:'Euronext' },
   cousin:'BNP Paribas', apple:'bad-hidden', conf:'m',
   esg0:72, rank:'5th of 58', pe:7.8, chart:[100,86,109], chart3y:'+9%',
   activities:['fossilFinancing'],
@@ -127,6 +137,8 @@ export const UNIVERSE = [
 // ----------------------------------------------------------------- MINING ---
 { id:'MIN', name:'Korsgaard Minerals', industry:'Mining', region:'Americas',
   blurb:'Copper, nickel and cobalt, with a legacy thermal coal division in run-off.',
+  profile:'Korsgaard Minerals Ltd mines and markets copper, nickel and cobalt from operations in Canada, Chile and Zambia, and retains a thermal coal division formally in run-off, with closure scheduled by 2035. Transition metals are about 78% of earnings and the company is among the ten largest cobalt producers. It settled historic bribery investigations in two jurisdictions in 2022 and accepted an independent monitor.',
+  facts:{ ceo:'Ingrid Solheim', employees:'44,600', founded:'1974', hq:'Toronto, Canada', revenue:'€52.8bn', listed:'Toronto, London' },
   cousin:'Glencore (transition case)', apple:'good-hidden', conf:'l',
   esg0:38, rank:'19th of 36', pe:6.9, chart:[100,118,147], chart3y:'+47%',
   activities:['thermalCoal'],
@@ -144,6 +156,8 @@ export const UNIVERSE = [
 // ------------------------------------------------------------------ AUTOS ---
 { id:'AUT', name:'Sakata Motor', industry:'Autos', region:'Asia-Pacific',
   blurb:'Mass-market vehicles. Hybrid-led electrification, 3% battery-electric.',
+  profile:'Sakata Motor Corporation builds mass-market passenger cars and light commercial vehicles, selling about 9.6 million units a year. Its electrification strategy is hybrid-led: roughly 31% of sales are hybrids and 3% battery-electric. The company argues that limited battery supply abates more carbon spread across many hybrids than concentrated in few electric cars, a position that has drawn criticism from climate groups and praise from some analysts.',
+  facts:{ ceo:'Rei Matsunaga', employees:'372,000', founded:'1937', hq:'Nagoya, Japan', revenue:'€243bn', listed:'Tokyo' },
   cousin:'Toyota', apple:'good-hidden', conf:'m',
   esg0:49, rank:'14th of 29', pe:10.1, chart:[100,109,121], chart3y:'+21%',
   activities:[],
@@ -164,6 +178,8 @@ export const UNIVERSE = [
 // --------------------------------------------------------- SEMICONDUCTORS ---
 { id:'SEM', name:'Nordlys Microsystems', industry:'Semiconductors', region:'Europe',
   blurb:'Power semiconductors for electric vehicles, solar inverters and grid.',
+  profile:'Nordlys Microsystems NV designs and manufactures power semiconductors and microcontrollers for electric vehicles, solar inverters and industrial automation. It runs its own fabs rather than outsourcing, which gives it control of supply and a heavy fixed-cost base. Around 42% of revenue comes from automotive customers. The group has no meaningful exposure to data-centre or AI accelerator demand.',
+  facts:{ ceo:'Bram de Vries', employees:'48,000', founded:'1987', hq:'Eindhoven, Netherlands', revenue:'€12.8bn', listed:'Amsterdam, Paris' },
   cousin:'STMicroelectronics', apple:'bad-hidden', conf:'m',
   esg0:77, rank:'2nd of 33', pe:21.6, chart:[100,128,166], chart3y:'+66%',
   activities:[],
@@ -184,6 +200,8 @@ export const UNIVERSE = [
 // --------------------------------------------------------------- SOFTWARE ---
 { id:'SFT', name:'Cloudline', industry:'Software', region:'Americas',
   blurb:'Enterprise customer software, sold per seat. Building AI agents into the suite.',
+  profile:'Cloudline Inc provides cloud-based customer relationship, service and marketing software to enterprises, sold on a per-seat subscription. Net revenue retention has run above 115% for six years on seat growth and upselling. The company is embedding generative AI agents across the suite, which it markets as a major upsell and which some analysts argue could reduce the number of seats its customers need.',
+  facts:{ ceo:'Dana Whitfield', employees:'73,500', founded:'1999', hq:'San Francisco, United States', revenue:'€24.6bn', listed:'New York' },
   cousin:'Salesforce', apple:'good-obvious', conf:'m',
   esg0:79, rank:'4th of 61', pe:38.2, chart:[100,142,174], chart3y:'+74%',
   activities:[],
@@ -200,6 +218,8 @@ export const UNIVERSE = [
 // ---------------------------------------------------------------- APPAREL ---
 { id:'APP', name:'Lumenwear', industry:'Apparel', region:'Europe',
   blurb:'Fast fashion. 1,240 tier-one suppliers across fourteen countries.',
+  profile:'Lumenwear AB designs and retails fast-fashion clothing through about 4,300 stores and online in 74 markets, running roughly sixteen collections a year. It sources from 1,240 tier-one suppliers across fourteen countries and does not own its factories. The group publishes a supplier list and a materials scorecard, and markets a \'Conscious\' range on the strength of recycled content — claims now under review by two consumer-protection regulators.',
+  facts:{ ceo:'Annika Sundqvist', employees:'107,000', founded:'1961', hq:'Stockholm, Sweden', revenue:'€19.8bn', listed:'Stockholm' },
   cousin:'H&M', apple:'bad-obvious', conf:'m',
   esg0:76, rank:'1st of 47', pe:19.3, chart:[100,96,131], chart3y:'+31%',
   activities:[],
@@ -221,6 +241,8 @@ export const UNIVERSE = [
 // ----------------------------------------------------------- FOOD AND BEV ---
 { id:'FOOD', name:'Marchetti Foods', industry:'Food and beverage', region:'Europe',
   blurb:'Packaged food and beverages. Palm oil in roughly 9% of lines.',
+  profile:'Marchetti Foods SpA makes packaged foods, coffee, confectionery, bottled water and infant nutrition, sold in almost every country. Palm oil appears in roughly 9% of lines and is 100% traceable to mill, though not to plantation. The group has cut manufacturing emissions 38% since 2018 and funds a regenerative agriculture programme across part of its direct sourcing. Bottled water remains a recurring source of local disputes over extraction rights.',
+  facts:{ ceo:'Giulia Ferrara', employees:'273,000', founded:'1866', hq:'Milan, Italy', revenue:'€87.4bn', listed:'Milan, Zurich' },
   cousin:'Nestl\u00e9 (transition case)', apple:'good-hidden', conf:'l',
   esg0:61, rank:'11th of 52', pe:18.7, chart:[100,107,113], chart3y:'+13%',
   activities:['palmOil'],
@@ -238,6 +260,8 @@ export const UNIVERSE = [
 // ---------------------------------------------------------------- PHARMA ---
 { id:'PHA', name:'Avenir Health', industry:'Pharmaceuticals', region:'Europe',
   blurb:'Generics and vaccines, with tiered pricing in low-income markets.',
+  profile:'Avenir Health SA develops and manufactures vaccines, generics and specialty medicines, with a vaccine portfolio covering eleven diseases. It operates tiered pricing in 64 lower-income countries and licenses several products to generic manufacturers through a public patent pool. The group ranks consistently in the top five of the Access to Medicine Index. Two significant patents expire within the period, covering about 11% of revenue.',
+  facts:{ ceo:'Marc Toussaint', employees:'69,000', founded:'1928', hq:'Lyon, France', revenue:'€34.9bn', listed:'Euronext Paris' },
   cousin:'GSK', apple:'good-obvious', conf:'m',
   esg0:74, rank:'3rd of 38', pe:14.2, chart:[100,103,110], chart3y:'+10%',
   activities:['animalTesting'],

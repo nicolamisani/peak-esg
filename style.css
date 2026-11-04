@@ -20,7 +20,8 @@ html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);
 body{min-height:100dvh;display:flex;flex-direction:column}
 
 /* ---- progress rail ------------------------------------------------------ */
-.rail{position:sticky;top:0;z-index:20;background:var(--paper);
+.top{position:sticky;top:0;z-index:20;background:var(--paper)}
+.rail{background:var(--paper);
   border-bottom:1px solid var(--rule);padding:10px 16px 9px;
   display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .rail .mark{display:flex;align-items:center;gap:7px;font-weight:700;font-size:14px;letter-spacing:-.01em}
@@ -152,3 +153,10 @@ input[type=range]{width:100%;accent-color:var(--green);height:44px}
 /* a fund that cannot take another analyst */
 .choice.off{opacity:.45;cursor:not-allowed}
 .choice.off:hover{border-color:var(--rule)}
+
+/* the team, under the rail, everywhere */
+.crew{background:var(--panel);
+  border-bottom:1px solid var(--rule);padding:6px 16px;
+  display:flex;gap:6px 14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+.crew .f{font-weight:700;color:var(--ink)}
+.crew b{color:var(--green);font-weight:600}

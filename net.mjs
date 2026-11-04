@@ -67,7 +67,8 @@ function fireNet(code) {
       const v = d.data() || {};
       cache = { ...cache, mine: { aiPitch: v.aiPitch || null, aiCrisis: v.aiCrisis || null,
                                   teamFlags: v.teamFlags || null, teamResult: v.teamResult || null,
-                                  desk: v.desk || null, full: !!v.full } };
+                                  desk: v.desk || null, full: !!v.full,
+                                  teamRoster: v.teamRoster || null } };
       subs.forEach(f => f(cache)); });
     return fs;
   })();

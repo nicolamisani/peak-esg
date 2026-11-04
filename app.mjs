@@ -1,15 +1,15 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 16:20 UTC
+// Peak ESG — the client   ·   published 2026-11-04 16:53 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11041620';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041620';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041620';
-import { NEWS, newsFor } from './data/news.mjs?v=11041620';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041620';
-import { makeNet } from './net.mjs?v=11041620';
+import * as M from './model/model.mjs?v=11041653';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041653';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041653';
+import { NEWS, newsFor } from './data/news.mjs?v=11041653';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041653';
+import { makeNet } from './net.mjs?v=11041653';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -932,25 +932,57 @@ const delta = d => !d ? '' : `<small>${d > 0 ? '+' : '\u2212'}${Math.abs(d)}</sm
 // different numbers, an unknown wait between them. One screen now, the same on
 // every device, and it leads with the thing that mattered instead of burying
 // it seventh in a list of nine.
+// The model produces two different kinds of number and the screen used to mix
+// them in one flat list. `marketMove` is the change in value of the shares you
+// own. Everything in `flows` is money investors put IN or took OUT afterwards
+// — including the one for relative performance, which is investors reacting to
+// a lagging fund, not the shares falling twice.
 const FLOW_WORDS = {
-  base:         ['money moving into sustainable funds generally',  'money leaving sustainable funds generally'],
-  performance:  ['beating the market',                             'trailing the market'],
-  esg:          ['the portfolio\u2019s ESG score',                     'the portfolio\u2019s ESG score'],
-  policy:       ['what the fund stands for',                       'what the fund stands for'],
-  fee:          ['charging less than your rivals',                 'charging more than your rivals'],
-  scandal:      ['',                                               'a scandal in the portfolio'],
-  greenwashing: ['',                                               'the gap between what you promised and what you own'],
-  concentration:['',                                               'holding too few companies'],
-  pitch:        ['the policy you wrote',                           'the policy you wrote'],
-  switched:     ['',                                               'investors who had bought the old strategy'],
-  trust:        ['',                                               'changing your mind about what the fund stands for']
+  base:         ['money flowing into sustainable funds',   'money flowing out of sustainable funds'],
+  performance:  ['the fund outperforming financially',     'the fund underperforming financially'],
+  esg:          ['the portfolio\u2019s ESG score',             'the portfolio\u2019s ESG score'],
+  policy:       ['your policy',                            'your policy'],
+  fee:          ['charging less than your rivals',         'charging more than your rivals'],
+  scandal:      ['',                                       'a scandal in the portfolio'],
+  greenwashing: ['',                                       'the gap between what you promised and what you own'],
+  concentration:['',                                       'holding too few companies'],
+  pitch:        ['your policy',                            'your policy'],
+  switched:     ['',                                       'investors who had bought the old strategy'],
+  trust:        ['',                                       'changing your mind about what the fund stands for']
 };
+// How strict the screen is and how well it was written are separate terms in
+// the model, and they are shown as one line: both are "your policy" to the
+// person reading, and splitting them invited the question of what the
+// difference was supposed to be.
+// The table labels carry their figures in brackets; a sentence should not.
+const plain = s => s.replace(/\s*\([^)]*\)\s*$/, '').toLowerCase();
+function flowRows(d, retTxt){
+  if (!d) return [];
+  const f = d.flows;
+  return [
+    ['Money flowing into sustainable funds', f.base],
+    ['Your portfolio\u2019s ESG score', f.esg],
+    [`The fund\u2019s financial ${f.performance >= 0 ? 'out' : 'under'}performance ${retTxt}`, f.performance],
+    ['Your policy \u2014 how strict it is, and how you put it', (f.policy || 0) + (f.pitch || 0)],
+    ['The gap between what you promised and what you own', f.greenwashing],
+    ['Your fee against your rivals', f.fee],
+    ['A scandal in the portfolio', f.scandal],
+    ['Holding too few companies', f.concentration],
+    ['Investors who wanted the old strategy', f.switched],
+    ['Trust, after changing your mind', f.trust]
+  ].filter(([, v]) => Math.abs(v) > 0.05);
+}
 SCREENS.performance = {
   html(){
     const t = S.reviewYear, y = YEARS[t], idx = idxRet(t);
     const hold = fundHoldings();
     const tr = S.teamResult || {};
-    const d  = isMgr() ? S.lastResult : null;
+    // playYear keeps every year's decomposition on the fund, and the fund is
+    // saved to the device. S.lastResult is not, so a reload used to leave the
+    // manager looking at "waiting for your fund's numbers" for a year that had
+    // already run. Read the history, fall back to the live one.
+    const hist = (S.fund && S.fund.years) || [];
+    const d  = isMgr() ? (hist[t] || (S.lastResult && S.lastResult.year === y ? S.lastResult : null)) : null;
     const r  = isMgr() ? (d ? d.ret : null) : (tr.ret == null ? null : tr.ret);
     const feeYear = isMgr() ? (d ? d.feeTake : null) : (tr.yearFees == null ? null : tr.yearFees);
     const total = isMgr() ? (S.fund ? S.fund.feesEarned : 0) : (tr.fees || 0);
@@ -997,21 +1029,48 @@ SCREENS.performance = {
       ['Trust, after changing your mind', d.flows.trust]]
       .filter(([, v]) => Math.abs(v) > 0.05) : [];
 
+    // Two stages, in the order they happen: the shares move, then investors
+    // move money. The old screen put both in one flat list, so "performance
+    // against the market" read as the shares falling a second time.
+    const startAt = d ? d.start : null;
+    const shares  = d ? d.marketMove : null;
+    const moved   = d ? (d.end - d.start - d.marketMove) : null;
+    const retTxt  = r === null ? '' : `(${pc(r,0)} against ${pc(idx,0)})`;
+    const flows   = flowRows(d, retTxt);
+    const ins     = flows.filter(x => x[1] > 0).sort((a,b) => b[1]-a[1]);
+    const outs    = flows.filter(x => x[1] < 0).sort((a,b) => a[1]-b[1]);
     return `<h1>${y}: how your fund did</h1>
       <p class="task">What the year did to your money, and to every company in the universe.</p>
       ${r === null ? `<div class="note">Waiting for your fund\u2019s numbers.</div>` : `
-        <div class="big ${r >= idx ? 'up' : 'down'}">${pc(r)}</div>
+        <div class="big ${r >= 0 ? 'up' : 'down'}">${pc(r)}</div>
         <div class="small">your fund\u2019s return in ${y} \u2014 the market returned ${pc(idx)}</div>
-        ${big}
-        <div class="decomp" style="margin-top:16px">
-          ${aum === null ? '' : `<div class="row"><span>The fund is now worth</span><span class="amt">${eur(aum)}</span></div>`}
-          ${feeYear === null ? '' : `<div class="row"><span>Fees earned in ${y}</span><span class="amt">${eur(feeYear)}</span></div>`}
-          <div class="row tot"><span>Fees earned so far</span><span class="amt">${eur(total)}</span></div>
+        <div class="story">
+          <p><b>Your fund started ${y} at ${eur(startAt)} and ended at ${eur(d.end)}.</b></p>
+          <p><b>The shares you held ${shares >= 0 ? 'rose' : 'fell'} ${eur(Math.abs(shares))}.</b>
+            The market ${idx >= 0 ? 'rose' : 'fell'} ${Math.abs(idx)}% and your companies
+            ${Math.abs(r) === Math.abs(idx) ? 'did the same' : (r >= idx ? 'did better than that' : 'did worse than that')}.</p>
+          <p><b>Then investors ${moved >= 0 ? 'put in' : 'took out'} ${eur(Math.abs(moved))}, on balance.</b>
+            ${ins.length ? `The biggest reason money came in was ${esc(plain(ins[0][0]))}
+              (${eur(ins[0][1])}).` : ''}
+            ${outs.length ? `The biggest reason it left was ${esc(plain(outs[0][0]))}
+              (${eur(outs[0][1])}).` : ''}</p>
+          <p>You earned <b>${eur(feeYear)}</b> in fees: ${pct(isMgr() ? S.fee : (tr.fee || 0))} of
+            ${eur((startAt + d.end) / 2)}, the average of what the fund was worth at the start
+            and at the end of the year.</p>
         </div>
-        ${rowsHtml.length ? `<details class="ex"><summary>Where the money went, line by line</summary>
-          <div class="decomp">${rowsHtml.map(([k, v]) => `<div class="row"><span>${k}</span>
-            <span class="amt ${v >= 0 ? 'pos' : 'neg'}">${eur(v)}</span></div>`).join('')}</div>
-        </details>` : ''}`}
+        ${flows.length ? `<details class="ex"><summary>Every reason, line by line</summary>
+          <div class="decomp">
+            <div class="row"><span>The shares you held</span>
+              <span class="amt ${shares >= 0 ? 'pos' : 'neg'}">${eur(shares)}</span></div>
+            <div class="row" style="border:0;padding-bottom:0"><span class="small">then investors moved money</span><span></span></div>
+            ${flows.map(([k, v]) => `<div class="row"><span>${k}</span>
+              <span class="amt ${v >= 0 ? 'pos' : 'neg'}">${eur(v)}</span></div>`).join('')}
+            <div class="row tot"><span>The fund is now worth</span><span class="amt">${eur(d.end)}</span></div>
+          </div>
+        </details>` : ''}
+        <div class="decomp" style="margin-top:14px">
+          <div class="row tot"><span>Fees earned so far</span><span class="amt">${eur(total)}</span></div>
+        </div>`}
       ${esgNow === null ? '' : `<div class="note info">
         <b>The fund\u2019s ESG score is ${esgNow.toFixed(0)} out of 100</b>${
           esgMove === 0 ? ', unchanged this year'
@@ -1023,6 +1082,9 @@ SCREENS.performance = {
       <h2>What it did not own</h2>
       <p class="small">This is what the policy and the portfolio cost the fund, or saved it.</p>
       ${rest.map(line).join('')}
+      <div class="note">${isMgr()
+        ? 'Before you decide anything, ask your analysts what changed on their desks this year \u2014 a score that moved, a story that broke, a policy that was quietly dropped. The news reaches them and not you.'
+        : 'Go back through your companies before the manager decides. The scores have moved and there is new press. Whatever you do not say out loud does not reach them.'}</div>
       <div class="actions"><button id="n" class="wide">How everyone else did</button></div>`;
   },
   wire(m){ m.querySelector('#n').onclick = () => go('standings'); }

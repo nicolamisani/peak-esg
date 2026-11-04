@@ -1,15 +1,15 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 18:42 UTC
+// Peak ESG — the client   ·   published 2026-11-04 18:50 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11041842';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041842';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041842';
-import { NEWS, newsFor } from './data/news.mjs?v=11041842';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041842';
-import { makeNet } from './net.mjs?v=11041842';
+import * as M from './model/model.mjs?v=11041850';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041850';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041850';
+import { NEWS, newsFor } from './data/news.mjs?v=11041850';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041850';
+import { makeNet } from './net.mjs?v=11041850';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -167,32 +167,31 @@ function botSay(who, msg, year){
 // Screens set it from html(); render() clears it first.
 function aside(msg){ S.aside = msg; return ''; }
 function botStrip(){
+  if (!isMgr()) return '';          // the analysts have no one talking to them
   const last = S.bot[S.bot.length-1];
-  const who = isMgr() ? 'Head of Distribution' : 'Head of Sustainability';
-  const cls = isMgr() ? 'botstrip dist' : 'botstrip';
+  const who = 'Chief Operating Officer';
+  const cls = 'botstrip dist';
   // An aside outranks the last message: it is about the screen in front of you.
   if (S.aside) return `<div class="${cls}" id="bot">
-    <span class="av">${isMgr()?'D':'S'}</span>
+    <span class="av">C</span>
     <div><div class="who">${who}</div><div class="msg">${S.aside}</div></div>
     ${S.bot.length ? `<span class="more">All ${S.bot.length} message${S.bot.length===1?'':'s'}</span>` : ''}</div>`;
   // The first thing either of them says is who they are. Before this the strip
   // read "Nothing from me yet", which told a student nothing about why a
   // stranger was going to be talking to them for the rest of the game.
-  const hello = isMgr()
-    ? 'I handle sales. Tap this bar at any time to read everything I have sent you.'
-    : 'I handle research. Tap this bar at any time to read everything I have sent you.';
+  const hello = 'I run the business side. Tap this bar at any time to read everything I have sent you.';
   if (!last) return `<div class="${cls} quiet" id="bot">
-      <span class="av">${isMgr()?'D':'S'}</span>
+      <span class="av">C</span>
       <div><div class="who">${who}</div><div class="msg">${hello}</div></div></div>`;
   // The count on its own ("3 ›") did not read as a control, so nobody opened it
   // and every message but the last was effectively lost.
   return `<div class="${cls}" id="bot">
-    <span class="av">${isMgr()?'D':'S'}</span>
+    <span class="av">C</span>
     <div><div class="who">${esc(last.who)}</div><div class="msg">${last.msg}</div></div>
     <span class="more">${S.bot.length === 1 ? 'Open' : 'All ' + S.bot.length + ' messages'}</span></div>`;
 }
 function botLog(){
-  const who = isMgr() ? 'the Head of Distribution' : 'the Head of Sustainability';
+  const who = 'your Chief Operating Officer';
   return `<div class="botlog" id="botlog"><div class="sheet">
     <h2 style="margin-top:0">Messages from ${who}</h2>
     <p class="small">Newest first. You can open this from the bar at the bottom of any screen.</p>
@@ -275,6 +274,12 @@ function render(){
     wrap.innerHTML = stripHtml;
     DOM.strip = stripHtml;
     const b = document.getElementById('bot');
+    // No bar on an analyst's screen any more, so nothing should be reserved
+    // for one: main pads itself by --bot, which would otherwise keep the last
+    // measured height and leave a dead strip under every dossier.
+    if (!b && DOM.bot !== 0) {
+      document.documentElement.style.setProperty('--bot', '0px'); DOM.bot = 0;
+    }
     if (b) {
       b.onclick = () => { S.botOpen = true; paint(); };
       // main reserves --bot at the bottom for this fixed bar. It used to be a
@@ -293,7 +298,7 @@ function render(){
     if (ct) ct.onclick = () => { S.teamOpen = false; paint(); };
     wrap.querySelectorAll('[data-eject]').forEach(b => b.onclick = () => {
       S.ejected = { ...(S.ejected||{}), [b.dataset.eject]: b.dataset.nm };
-      botSay('Head of Distribution',
+      botSay('Chief Operating Officer',
         `<b>${Hey()}I have taken ${esc(b.dataset.nm)} off the fund.</b> That desk is free again.`);
       publishMe(); paint();
     });
@@ -470,7 +475,7 @@ SCREENS.brief = {
         your name beside it on their screen. There is no button for the opposite — if you
         think the fund should stay away from one of yours, you have to say so out loud.</div>
       <p class="task">News and share prices update inside the dossiers every year, so come
-        back to them. The Head of Sustainability will send you anything that moves.</p>
+        back to them \u2014 a rating that moved or a story that broke is yours to find.</p>
       <div class="actions"><button id="n" class="wide">Open my desk</button></div>`;
   },
   wire(m){ m.querySelector('#n').onclick=()=> go(isMgr()?'strategy':'desk'); }
@@ -708,7 +713,7 @@ SCREENS.threshold = {
     if (p.strategy==='integrate') ctl = `
       <p>Minimum in-house score: <b>${p.minScore}</b> out of 100.</p>
       <input type="range" id="r" min="0" max="90" step="5" value="${p.minScore}">`;
-    // Advice goes to the Head of Distribution; the hard gate stays on screen,
+    // Advice goes to the COO; the hard gate stays on screen,
     // because it explains a disabled button.
     const warn = n<3 ? `<div class="note bad">That admits only ${n} companies. You need at least three holdings.</div>` : '';
     if (n>=3 && st<0.05) aside('This excludes nothing. Investors who care about sustainability will not buy a fund with no policy.');
@@ -765,7 +770,7 @@ SCREENS.threshold = {
       S.fund.switchPending = true;
       S.fund.switches = S.switches;
       S.fund.policy = S.policy;
-      botSay('Head of Distribution',
+      botSay('Chief Operating Officer',
         `<b>${Hey()}it is done.</b> Investors have been told the fund now stands for `
         + `<b>${esc(STRAT_NAME[S.policy.strategy]||'something else')}</b>. `
         + `About <b>${(M.SWITCH_CUT*100).toFixed(0)}%</b> of the money will leave this year.`);
@@ -797,7 +802,7 @@ SCREENS.fee = {
     m.querySelector('#b').onclick=()=>go('threshold');
     m.querySelector('#n').onclick=()=>{
       S.fund=M.newFund({policy:S.policy,fee:S.fee});
-      botSay('Head of Distribution',Hey()+'we are open at <b>'+pct(S.fee)+'</b> a year. Keep an eye on what the other funds charge — the market rate moves, and being dearer than it costs us money.',2022);
+      botSay('Chief Operating Officer',Hey()+'we are open at <b>'+pct(S.fee)+'</b> a year. Keep an eye on what the other funds charge — the market rate moves, and being dearer than it costs us money.',2022);
       publishMe(); go('allocate'); }; }
 };
 
@@ -867,7 +872,7 @@ SCREENS.open = {
             You are allowed to own ${breach.length===1?'it':'them'}. Investors will notice
             the difference.</div>`
         : `<div class="note good">Every holding is inside the policy you wrote.</div>`}
-      ${S.aiNote ? '' : `<div class="note">Your Head of Distribution is reading your policy
+      ${S.aiNote ? '' : `<div class="note">Your Chief Operating Officer is reading your policy
         statement now. Watch the bar at the bottom.</div>`}
       <div class="waitbox"><b>Waiting for 2022 to open</b>
         <div class="small" style="margin-top:4px">The instructor starts the first year from the
@@ -1304,13 +1309,13 @@ SCREENS.decide = {
       else if (!held && wasHeld) { S.holdings[id] = start[id]; }  // put one back
       else if (held) {                                            // a real sale
         if (u.drops >= DROPS_YEAR) {
-          botSay('Head of Distribution', `${Hey()}that is both of your sales for ${YEARS[S.year]}. Put one back if you would rather sell something else \u2014 changing your mind costs nothing.`);
+          botSay('Chief Operating Officer', `${Hey()}that is both of your sales for ${YEARS[S.year]}. Put one back if you would rather sell something else \u2014 changing your mind costs nothing.`);
           paint(); return;
         }
         delete S.holdings[id];
       } else {                                                    // a real purchase
         if (u.adds >= ADDS_YEAR) {
-          botSay('Head of Distribution', `${Hey()}that is both of your purchases for ${YEARS[S.year]}. Undo one if you would rather buy something else \u2014 changing your mind costs nothing.`);
+          botSay('Chief Operating Officer', `${Hey()}that is both of your purchases for ${YEARS[S.year]}. Undo one if you would rather buy something else \u2014 changing your mind costs nothing.`);
           paint(); return;
         }
         S.holdings[id] = 1;
@@ -1410,7 +1415,7 @@ SCREENS.crisis = {
         const words = text.split(/\s+/).length;
         const specific = new RegExp(S.crisis.c.name.split(' ')[0], 'i').test(text);
         S.fund.crisisCredit = Math.min(0.5, (words>=25?0.35:words>=12?0.2:0.05) + (specific?0.12:0));
-        botSay('Head of Distribution',
+        botSay('Chief Operating Officer',
           Hey()+'your statement has been assessed on this device, without the AI.');
         done(); return;
       }
@@ -1436,7 +1441,7 @@ function resolveYear(){
   // the one investors actually bought until she confirms and pays for it.
   if (S.switching && S.policySnapshot) {
     restoreSwitch();
-    botSay('Head of Distribution',
+    botSay('Chief Operating Officer',
       `${Hey()}the year ran before you confirmed the new policy, so we are still selling the old one.`);
   }
   S.fund.holdings = S.holdings; S.fund.fee = S.fee;
@@ -1457,21 +1462,21 @@ function resolveYear(){
   const y = YEARS[S.year];
   Object.keys(S.holdings).forEach(id => {
     const n = newsFor(id, y);
-    if (n && n.w === 'major') botSay('Head of Distribution',
+    if (n && n.w === 'major') botSay('Chief Operating Officer',
       `<b>${Hey()}we own this.</b> ${esc(co(id).name)}: ${esc(n.t)} — ${esc(n.s)}`);
   });
 
-  // the Head of Distribution reacts to what just happened
+  // the COO reacts to what just happened
   const d = decomposition;
-  if (d.flows.scandal < -8) botSay('Head of Distribution',
+  if (d.flows.scandal < -8) botSay('Chief Operating Officer',
     `<b>${Hey()}this is bad.</b> We lost <b>${eur(-d.flows.scandal)}</b> over a scandal at one of our holdings, and investors are asking what we knew.`);
-  else if (d.flows.greenwashing < -5) botSay('Head of Distribution',
+  else if (d.flows.greenwashing < -5) botSay('Chief Operating Officer',
     `<b>${Hey()}we are being caught out.</b> <b>${eur(-d.flows.greenwashing)}</b> left over the gap between what our policy promises and what we actually own. That is money we could keep just by meaning what we say.`);
-  else if (d.flows.fee < -6) botSay('Head of Distribution',
+  else if (d.flows.fee < -6) botSay('Chief Operating Officer',
     `<b>${Hey()}we are too expensive.</b> <b>${eur(-d.flows.fee)}</b> walked out over price alone. Think about the fee.`);
-  else if (d.ret > d.retIndex + 4) botSay('Head of Distribution',
+  else if (d.ret > d.retIndex + 4) botSay('Chief Operating Officer',
     `<b>${Hey()}good year.</b> We beat the market by <b>${pc(d.ret-d.retIndex)}</b>. We could charge more for this.`);
-  else botSay('Head of Distribution',
+  else botSay('Chief Operating Officer',
     `${Hey()}we earned <b>${eur(d.feeTake)}</b> in fees this year, and the fund is ${d.end>=d.start?'up':'down'} at <b>${eur(d.end)}</b>.`);
   S.resolvedYear = S.year;
   publishMe();
@@ -1591,13 +1596,13 @@ function connect(){
                    retn: mine.aiPitch.returnDriven || 0 };
       if (S.fund) S.fund.appeal = S.appeal;
       S.aiNote = mine.aiPitch.note || '';
-      botSay('Head of Distribution',
+      botSay('Chief Operating Officer',
         `<b>${Hey()}I have read your policy.</b> ${esc(mine.aiPitch.note || 'It will do.')}`);
     }
     if (mine.aiCrisis && S.aiCrisisYear !== mine.aiCrisis.year) {
       S.aiCrisisYear = mine.aiCrisis.year;
       if (S.fund) S.fund.crisisCredit = mine.aiCrisis.credit || 0;
-      botSay('Head of Distribution',
+      botSay('Chief Operating Officer',
         `<b>${Hey()}the market has read your statement.</b> ${esc(mine.aiCrisis.note || 'It landed.')}`);
     }
     // Her own analysts' flags, and only theirs. The worker matches them by team

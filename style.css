@@ -252,3 +252,11 @@ details.ex blockquote{margin:10px 0;padding:12px 15px;background:#fff;
   letter-spacing:.02em;color:var(--soft);padding:7px 4px 6px;border-bottom:2px solid transparent}
 .beats i.done{color:var(--muted)}
 .beats i.on{color:var(--green);border-bottom-color:var(--green)}
+
+/* A heading that is present for the document outline but not drawn. */
+.sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* A heading present for the document outline but not drawn. */
+.sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}

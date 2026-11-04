@@ -1,15 +1,15 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 16:07 UTC
+// Peak ESG — the client   ·   published 2026-11-04 16:11 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11041607';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041607';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041607';
-import { NEWS, newsFor } from './data/news.mjs?v=11041607';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041607';
-import { makeNet } from './net.mjs?v=11041607';
+import * as M from './model/model.mjs?v=11041611';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041611';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041611';
+import { NEWS, newsFor } from './data/news.mjs?v=11041611';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041611';
+import { makeNet } from './net.mjs?v=11041611';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -22,7 +22,7 @@ const S = {
   analystsPresent:3,
   year:0, phase:'setup',
   resolvedYear:null,           // the last year this fund actually ran
-  adds:0, drops:0,             // this year's budgets, reset when a year opens
+  yearStart:null,              // the portfolio as the year opened, for the budgets
   policy:{ strategy:null, excluded:[], rank:5, minScore:50 },
   policyText:'', fee:M.FEE_START,
   reviewYear:0, reviewTo:null,     // which year's review, and where it leads
@@ -334,7 +334,8 @@ const HOWTO = [
 ];
 SCREENS.intro = {
   html(){ return `
-    <div class="title">
+    <h1 class="sr">Peak ESG</h1>
+    <div class="title" aria-hidden="true">
       <div class="titlemark">${MARK}</div>
       <div class="titlename">Peak <span>ESG</span></div>
       <div class="titlesub">Six years, twelve companies, one fund \u00b7 2022\u20132027</div>
@@ -530,10 +531,13 @@ SCREENS.desk = {
             d ? `<small>${d>0?'+':'−'}${Math.abs(d)}</small>` : ''}</span></div>`; }).join('')}
       <div class="note">Every company here is scored 0 to 100 by the same in-house rating team.
         <b>Two of your four are not what their score suggests</b> — one is better than its score,
-        one is worse. Working out which is your job.</div>`;
+        one is worse. Working out which is your job.</div>
+      ${S.phase && S.phase !== 'setup' ? `<div class="actions">
+        <button id="back" class="wide">Back to my recommendations</button></div>` : ''}`;
   },
   wire(m){ m.querySelectorAll('[data-id]').forEach(r=>r.onclick=()=>{
-    S.openCo=r.dataset.id; S.openSect='prof'; go('dossier'); }); }
+    S.openCo=r.dataset.id; S.openSect='prof'; go('dossier'); });
+    const b=m.querySelector('#back'); if(b) b.onclick=()=>go('standby'); }
 };
 
 const SECTIONS = [
@@ -828,6 +832,7 @@ SCREENS.open = {
     // opened joins it straight away; otherwise she waits for the instructor.
     if (st && (st.stage === 'decide' || st.stage === 'running'))
       setTimeout(()=>{ S.year = st.year || 0; S.trades = 0;
+                       S.yearStart = { ...S.holdings };
                        go(st.stage === 'running' ? 'running' : 'decide'); }, 0); }
 };
 
@@ -841,7 +846,7 @@ SCREENS.open = {
 // companies on their desks part of a world rather than twelve index cards.
 SCREENS.review = {
   html(){ const y = YEARS[S.reviewYear] || YEARS[0]; const r = REVIEW[y] || { body:[] };
-    const on = 'How my fund did';
+    const on = 'How our fund did';
     // Not escaped: the reviews are authored here and carry <b> on the figures
     // that matter, because a wall of plain prose is a wall nobody reads.
     return `<h1>${y} in review</h1>
@@ -864,7 +869,8 @@ SCREENS.running = {
     const y = YEARS[S.year];
     const hold = fundHoldings();
     const n = Object.keys(hold).length;
-    return `<div class="runwrap">
+    return `<h1 class="sr">${y} is running</h1>
+    <div class="runwrap">
       <div class="runyear">${y}</div>
       <div class="runline"><i></i></div>
       <div class="runsub" id="runsub">The market opens\u2026</div>
@@ -1027,8 +1033,9 @@ SCREENS.standings = {
     const y = YEARS[S.reviewYear];
     const board = (S.board || []).slice().sort((a, b) => (b.fees || 0) - (a.fees || 0));
     const me = board.findIndex(isMyFund);
-    return `<h1>Where everyone stands</h1>
-      <p class="task">Total fees earned after ${y}. This is the only thing you are scored on.</p>
+    return `<h1>Leaderboard</h1>
+      <p class="task">Every fund in the room, yours included, by total fees earned after ${y}.
+        This is the only thing you are scored on.</p>
       ${board.length ? `<div class="decomp">${board.map((f, i) => `<div class="row${isMyFund(f) ? ' tot' : ''}">
         <span>${i + 1}. ${esc(f.name || 'Unnamed')}${isMyFund(f) ? ' \u2014 yours' : ''}</span>
         <span class="amt">${eur(f.fees || 0)}</span></div>`).join('')}</div>`
@@ -1081,11 +1088,22 @@ SCREENS.standby = {          // analyst: between decisions
 // taps simply did nothing, which is indistinguishable from the app being
 // broken. There is no Run button: the instructor runs the year.
 const ADDS_YEAR = 2, DROPS_YEAR = 2;
+// The budget counts the NET difference from the portfolio you started the year
+// with, not the number of times you tapped. Buying something and changing your
+// mind therefore costs nothing, which is what lets a manager explore while her
+// analysts are still arguing. Counting taps punished thinking out loud.
+function budget(){
+  const st = S.yearStart || S.holdings || {};
+  return { adds:  Object.keys(S.holdings).filter(id => !st[id]).length,
+           drops: Object.keys(st).filter(id => !S.holdings[id]).length };
+}
 SCREENS.decide = {
   html(){
     const n = Object.keys(S.holdings).length;
     const breach = M.breaches(S.policy, S.holdings);
-    const addsLeft = ADDS_YEAR - (S.adds || 0), dropsLeft = DROPS_YEAR - (S.drops || 0);
+    const used = budget();
+    const addsLeft = ADDS_YEAR - used.adds, dropsLeft = DROPS_YEAR - used.drops;
+    const st = S.yearStart || S.holdings || {};
     const chip = (k, left, of) => `<span class="budget ${left ? '' : 'spent'}">${
       left ? `${left} of ${of} left` : `none left`} \u00b7 ${k}</span>`;
     return `<h1>${YEARS[S.year]}: do you want to change anything?</h1>
@@ -1114,7 +1132,10 @@ SCREENS.decide = {
         it you hold. ${chip('to add', addsLeft, ADDS_YEAR)} ${chip('to drop', dropsLeft, DROPS_YEAR)}
         <span class="budget">weights \u00b7 as many as you like</span></p>
       ${UNIVERSE.map(c => { const w = S.holdings[c.id];
-        const blocked = w ? !dropsLeft : !addsLeft;
+        // Putting back something you started the year with is always allowed,
+        // and so is undoing a purchase you just made.
+        const undo = w ? !st[c.id] : !!st[c.id];
+        const blocked = undo ? false : (w ? !dropsLeft : !addsLeft);
         return `<div class="co ${w ? 'held' : ''}${blocked ? ' off' : ''}" data-id="${c.id}">
           <div><div class="nm">${esc(c.name)}</div>
             <div class="ind">${esc(c.industry)}</div>
@@ -1141,20 +1162,24 @@ SCREENS.decide = {
     m.querySelectorAll('[data-w]').forEach(b => b.onclick = e => { e.stopPropagation();
       const id = b.dataset.w;
       S.holdings[id] = (S.holdings[id] % M.MAX_WEIGHT) + 1; publishMe(); paint(); });
+    const start = S.yearStart || S.holdings || {};
     m.querySelectorAll('[data-id]').forEach(row => row.onclick = () => {
-      const id = row.dataset.id;
-      if (S.holdings[id]) {
-        if ((S.drops || 0) >= DROPS_YEAR) {
-          botSay('Head of Distribution', `${Hey()}that is both of your sales for ${YEARS[S.year]}. You can still change the weights, and the fee.`);
+      const id = row.dataset.id, held = !!S.holdings[id], wasHeld = !!start[id];
+      const u = budget();
+      if (held && !wasHeld) { delete S.holdings[id]; }            // undo a purchase
+      else if (!held && wasHeld) { S.holdings[id] = start[id]; }  // put one back
+      else if (held) {                                            // a real sale
+        if (u.drops >= DROPS_YEAR) {
+          botSay('Head of Distribution', `${Hey()}that is both of your sales for ${YEARS[S.year]}. Put one back if you would rather sell something else \u2014 changing your mind costs nothing.`);
           paint(); return;
         }
-        S.drops = (S.drops || 0) + 1; delete S.holdings[id];
-      } else {
-        if ((S.adds || 0) >= ADDS_YEAR) {
-          botSay('Head of Distribution', `${Hey()}that is both of your purchases for ${YEARS[S.year]}. You can still change the weights, and the fee.`);
+        delete S.holdings[id];
+      } else {                                                    // a real purchase
+        if (u.adds >= ADDS_YEAR) {
+          botSay('Head of Distribution', `${Hey()}that is both of your purchases for ${YEARS[S.year]}. Undo one if you would rather buy something else \u2014 changing your mind costs nothing.`);
           paint(); return;
         }
-        S.adds = (S.adds || 0) + 1; S.holdings[id] = 1;
+        S.holdings[id] = 1;
       }
       publishMe(); paint();
     });
@@ -1469,7 +1494,8 @@ function connect(){
       S.year = st.year; go('running');
     } else if (st.stage === 'decide' && stageChanged) {
       // A new year to decide. Analysts read this year's news first.
-      S.year = st.year; S.trades = 0; S.adds = 0; S.drops = 0;
+      S.year = st.year; S.trades = 0;
+      S.yearStart = { ...S.holdings };     // the budgets measure drift from here
       go(isMgr() ? 'decide' : 'news');
     } else if (st.stage === 'results' && !RESULTS.includes(S.screen)
                && S.screen !== 'running' && !BUSY.includes(S.screen)) {

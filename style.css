@@ -265,3 +265,20 @@ details.ex blockquote{margin:10px 0;padding:12px 15px;background:#fff;
 .story{border-left:3px solid var(--green-2);padding:2px 0 2px 15px;margin:18px 0}
 .story p{margin:0 0 9px;font-size:14.5px;line-height:1.55}
 .story p:last-child{margin-bottom:0;color:var(--ink-2)}
+
+/* Name the numeric columns once, above the list, rather than on every row. */
+.colhead{display:flex;justify-content:flex-end;align-items:baseline;gap:12px;
+  padding:0 14px 5px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--soft);font-weight:600}
+.colhead .c1{min-width:48px;text-align:center}
+.colhead .c2{min-width:60px;text-align:center}
+
+/* The fee, worked through, because the arithmetic is part of the lesson. */
+.sum{border:1px solid var(--rule-2);border-radius:9px;padding:13px 15px;margin:16px 0;
+  background:var(--panel)}
+.sumh{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+  font-weight:650;margin-bottom:8px}
+.sumrow{display:flex;justify-content:space-between;gap:14px;padding:5px 0;font-size:14px}
+.sumrow span:last-child{font-family:var(--mono);font-weight:600;white-space:nowrap}
+.sumrow.rule{border-top:1px solid var(--rule);margin-top:3px;padding-top:8px}
+.sumrow.tot{border-top:2px solid var(--ink);margin-top:5px;padding-top:8px;font-weight:700}

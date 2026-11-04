@@ -1,15 +1,15 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 16:53 UTC
+// Peak ESG — the client   ·   published 2026-11-04 16:55 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11041653';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041653';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041653';
-import { NEWS, newsFor } from './data/news.mjs?v=11041653';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041653';
-import { makeNet } from './net.mjs?v=11041653';
+import * as M from './model/model.mjs?v=11041655';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041655';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041655';
+import { NEWS, newsFor } from './data/news.mjs?v=11041655';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041655';
+import { makeNet } from './net.mjs?v=11041655';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -513,6 +513,8 @@ SCREENS.desk = {
     const yr = playing ? YEARS[S.year] : 2021;
     return `<h1>Your desk</h1>
       <p class="task">Tap a company to open its dossier. The score is one rating agency's opinion.</p>
+      ${playing ? `<div class="colhead"><span class="c2">${yr} return</span><span class="c1">ESG score</span></div>`
+                : `<div class="colhead"><span class="c1">ESG score</span></div>`}
       ${ids.map(id=>{ const c=co(id); const f=S.flags[id];
         // The score moves with events, so showing the 2021 number all game
         // would hide the one thing an analyst is meant to be watching.
@@ -925,6 +927,8 @@ const scoreAt = (c, t) => t < 0 ? c.esg0 : c.esg[t];
 const fundEsgAt = (hold, t) => { const w = M.weightsOf(hold);
   return Object.keys(hold).reduce((x, id) => x + w[id] * scoreAt(co(id), t), 0); };
 const delta = d => !d ? '' : `<small>${d > 0 ? '+' : '\u2212'}${Math.abs(d)}</small>`;
+const colhead = (yr) => `<div class="colhead">
+  <span class="c1">ESG score</span><span class="c2">${yr ? yr + ' return' : 'return'}</span></div>`;
 
 // What the year did to your fund. This used to be two screens on two clocks:
 // the manager got a private `result` the moment she pressed Run, and everyone
@@ -1054,9 +1058,18 @@ SCREENS.performance = {
               (${eur(ins[0][1])}).` : ''}
             ${outs.length ? `The biggest reason it left was ${esc(plain(outs[0][0]))}
               (${eur(outs[0][1])}).` : ''}</p>
-          <p>You earned <b>${eur(feeYear)}</b> in fees: ${pct(isMgr() ? S.fee : (tr.fee || 0))} of
-            ${eur((startAt + d.end) / 2)}, the average of what the fund was worth at the start
-            and at the end of the year.</p>
+        </div>
+        <div class="sum">
+          <div class="sumh">How your fee was calculated</div>
+          <div class="sumrow"><span>What the fund was worth on 1 January</span><span>${eur(startAt)}</span></div>
+          <div class="sumrow"><span>What it was worth on 31 December</span><span>${eur(d.end)}</span></div>
+          <div class="sumrow rule"><span>Average over the year \u2014 what you charge on</span>
+            <span>${eur((startAt + d.end) / 2)}</span></div>
+          <div class="sumrow"><span>Your fee</span><span>\u00d7 ${pct(isMgr() ? S.fee : (tr.fee || 0))}</span></div>
+          <div class="sumrow tot"><span>Fees earned in ${y}</span><span>${eur(feeYear)}</span></div>
+          <p class="small" style="margin:10px 0 0">The fee is charged on the <b>average</b>, not on
+            what you end with. So money that arrives late in the year earns you only part of a
+            year\u2019s fee \u2014 and a fund that shrinks still earns something on the way down.</p>
         </div>
         ${flows.length ? `<details class="ex"><summary>Every reason, line by line</summary>
           <div class="decomp">
@@ -1078,10 +1091,10 @@ SCREENS.performance = {
         It moves on its own, without anybody trading: the rating team re-scores every
         company each year.</div>`}
       <h2>What the fund owned</h2>
-      ${owned.length ? owned.map(line).join('') : `<div class="note">Nothing.</div>`}
+      ${owned.length ? colhead(y) + owned.map(line).join('') : `<div class="note">Nothing.</div>`}
       <h2>What it did not own</h2>
       <p class="small">This is what the policy and the portfolio cost the fund, or saved it.</p>
-      ${rest.map(line).join('')}
+      ${colhead(y)}${rest.map(line).join('')}
       <div class="note">${isMgr()
         ? 'Before you decide anything, ask your analysts what changed on their desks this year \u2014 a score that moved, a story that broke, a policy that was quietly dropped. The news reaches them and not you.'
         : 'Go back through your companies before the manager decides. The scores have moved and there is new press. Whatever you do not say out loud does not reach them.'}</div>
@@ -1095,7 +1108,6 @@ SCREENS.standings = {
   html(){
     const y = YEARS[S.reviewYear];
     const board = (S.board || []).slice().sort((a, b) => (b.fees || 0) - (a.fees || 0));
-    const me = board.findIndex(isMyFund);
     return `<h1>Leaderboard</h1>
       <p class="task">Every fund in the room, yours included, by total fees earned after ${y}.
         This is the only thing you are scored on.</p>
@@ -1103,10 +1115,6 @@ SCREENS.standings = {
         <span>${i + 1}. ${esc(f.name || 'Unnamed')}${isMyFund(f) ? ' \u2014 yours' : ''}</span>
         <span class="amt">${eur(f.fees || 0)}</span></div>`).join('')}</div>`
         : `<div class="note">No other funds yet.</div>`}
-      ${me > 0 ? `<div class="note">${eur((board[0].fees||0) - (board[me].fees||0))} behind the leader.</div>`
-        : me === 0 && board.length > 1 ? `<div class="note good">You are ahead.</div>` : ''}
-      <div class="note info">Every fund here is running the same six years and the same twelve
-        companies. The differences are all decisions.</div>
       <div class="actions"><button id="n" class="wide">${
         S.reviewTo ? 'See the final result' : 'Done'}</button></div>`;
   },

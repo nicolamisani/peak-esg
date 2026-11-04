@@ -1,15 +1,15 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 14:46 UTC
+// Peak ESG — the client   ·   published 2026-11-04 14:53 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11041446';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041446';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041446';
-import { NEWS, newsFor } from './data/news.mjs?v=11041446';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041446';
-import { makeNet } from './net.mjs?v=11041446';
+import * as M from './model/model.mjs?v=11041453';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041453';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041453';
+import { NEWS, newsFor } from './data/news.mjs?v=11041453';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041453';
+import { makeNet } from './net.mjs?v=11041453';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -139,7 +139,7 @@ function botStrip(){
   // stranger was going to be talking to them for the rest of the game.
   const hello = isMgr()
     ? 'I handle sales. I will tell you here what investors are doing, what other funds are charging, and what the market makes of our policy. Tap this bar at any time to read everything I have sent you.'
-    : `I handle research. I will tell you here when a rating moves or a story breaks on one of your ${myDesk().length} companies. Tap this bar at any time to read everything I have sent you.`;
+    : 'I handle research. I will tell you here when a rating moves or a story breaks on one of your companies. Tap this bar at any time to read everything I have sent you.';
   if (!last) return `<div class="${cls} quiet" id="bot">
       <span class="av">${isMgr()?'D':'S'}</span>
       <div><div class="who">${who}</div><div class="msg">${hello}</div></div></div>`;

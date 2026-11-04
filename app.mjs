@@ -1,15 +1,15 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 17:05 UTC
+// Peak ESG — the client   ·   published 2026-11-04 17:07 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11041705';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041705';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041705';
-import { NEWS, newsFor } from './data/news.mjs?v=11041705';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041705';
-import { makeNet } from './net.mjs?v=11041705';
+import * as M from './model/model.mjs?v=11041707';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041707';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041707';
+import { NEWS, newsFor } from './data/news.mjs?v=11041707';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041707';
+import { makeNet } from './net.mjs?v=11041707';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -1102,7 +1102,7 @@ SCREENS.performance = {
       <div class="note">${isMgr()
         ? 'Before you decide anything, ask your analysts what changed on their desks this year \u2014 a score that moved, a story that broke, a policy that was quietly dropped. The news reaches them and not you.'
         : 'Go back through your companies before the manager decides. The scores have moved and there is new press. Whatever you do not say out loud does not reach them.'}</div>
-      <div class="actions"><button id="n" class="wide">How everyone else did</button></div>`;
+      <div class="actions"><button id="n" class="wide">Leaderboard</button></div>`;
   },
   wire(m){ m.querySelector('#n').onclick = () => go('standings'); }
 };

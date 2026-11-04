@@ -1,15 +1,15 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 16:57 UTC
+// Peak ESG — the client   ·   published 2026-11-04 17:05 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11041657';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041657';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041657';
-import { NEWS, newsFor } from './data/news.mjs?v=11041657';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041657';
-import { makeNet } from './net.mjs?v=11041657';
+import * as M from './model/model.mjs?v=11041705';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041705';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041705';
+import { NEWS, newsFor } from './data/news.mjs?v=11041705';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041705';
+import { makeNet } from './net.mjs?v=11041705';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -966,8 +966,8 @@ function flowRows(d, retTxt){
   return [
     ['Money flowing into sustainable funds', f.base],
     ['Your portfolio\u2019s ESG score', f.esg],
-    [`The fund\u2019s financial ${f.performance >= 0 ? 'out' : 'under'}performance ${retTxt}`, f.performance],
-    ['Your policy \u2014 how strict it is, and how you put it', (f.policy || 0) + (f.pitch || 0)],
+    [`The fund\u2019s financial ${f.performance >= 0 ? 'out' : 'under'}performance${retTxt}`, f.performance],
+    ['Your policy and how you presented it', (f.policy || 0) + (f.pitch || 0)],
     ['The gap between what you promised and what you own', f.greenwashing],
     ['Your fee against your rivals', f.fee],
     ['A scandal in the portfolio', f.scandal],
@@ -1039,7 +1039,7 @@ SCREENS.performance = {
     const startAt = d ? d.start : null;
     const shares  = d ? d.marketMove : null;
     const moved   = d ? (d.end - d.start - d.marketMove) : null;
-    const retTxt  = r === null ? '' : `(${pc(r,0)} against ${pc(idx,0)})`;
+    const retTxt  = r === null ? '' : ` (${pc(r,0)} against ${pc(idx,0)} for the market as a whole)`;
     const flows   = flowRows(d, retTxt);
     const ins     = flows.filter(x => x[1] > 0).sort((a,b) => b[1]-a[1]);
     const outs    = flows.filter(x => x[1] < 0).sort((a,b) => a[1]-b[1]);
@@ -1050,7 +1050,7 @@ SCREENS.performance = {
         <div class="small">your fund\u2019s return in ${y} \u2014 the market returned ${pc(idx)}</div>
         <div class="story">
           <p><b>Your fund started ${y} at ${eur(startAt)} and ended at ${eur(d.end)}.</b></p>
-          <p><b>The shares you held ${shares >= 0 ? 'rose' : 'fell'} ${eur(Math.abs(shares))}.</b>
+          <p><b>The stock of the companies you held ${shares >= 0 ? 'rose' : 'fell'} ${eur(Math.abs(shares))}.</b>
             The market ${idx >= 0 ? 'rose' : 'fell'} ${Math.abs(idx)}% and your companies
             ${Math.abs(r) === Math.abs(idx) ? 'did the same' : (r >= idx ? 'did better than that' : 'did worse than that')}.</p>
           <p><b>Then investors ${moved >= 0 ? 'put in' : 'took out'} ${eur(Math.abs(moved))}, on balance.</b>
@@ -1073,9 +1073,9 @@ SCREENS.performance = {
         </div>
         ${flows.length ? `<details class="ex"><summary>Every reason, line by line</summary>
           <div class="decomp">
-            <div class="row"><span>The shares you held</span>
+            <div class="row"><span>Stock performance of your companies</span>
               <span class="amt ${shares >= 0 ? 'pos' : 'neg'}">${eur(shares)}</span></div>
-            <div class="row" style="border:0;padding-bottom:0"><span class="small">then investors moved money</span><span></span></div>
+            <div class="row stage"><span>Then investors moved money</span><span></span></div>
             ${flows.map(([k, v]) => `<div class="row"><span>${k}</span>
               <span class="amt ${v >= 0 ? 'pos' : 'neg'}">${eur(v)}</span></div>`).join('')}
             <div class="row tot"><span>The fund is now worth</span><span class="amt">${eur(d.end)}</span></div>
@@ -1085,11 +1085,15 @@ SCREENS.performance = {
           <div class="row tot"><span>Fees earned so far</span><span class="amt">${eur(total)}</span></div>
         </div>`}
       ${esgNow === null ? '' : `<div class="note info">
-        <b>The fund\u2019s ESG score is ${esgNow.toFixed(0)} out of 100</b>${
-          esgMove === 0 ? ', unchanged this year'
-            : `, ${esgMove > 0 ? 'up' : 'down'} ${Math.abs(esgMove)} from ${esgWas.toFixed(0)}`}.
-        It moves on its own, without anybody trading: the rating team re-scores every
-        company each year.</div>`}
+        <b>The fund\u2019s ESG score is ${esgNow.toFixed(0)} out of 100.</b>
+        ${t === 0
+          ? 'The rating team re-scores every company at the end of each year, so from next'
+            + ' year this number will move on its own, without you trading at all.'
+          : (esgMove === 0
+              ? 'It is unchanged: the re-scoring of your companies cancelled out this year.'
+              : `It is ${esgMove > 0 ? 'up' : 'down'} ${Math.abs(esgMove)} from ${esgWas.toFixed(0)},`
+                + ' and you did not have to trade for that \u2014 the rating team re-scored your'
+                + ' companies.')}</div>`}
       <h2>What the fund owned</h2>
       ${owned.length ? colhead(y) + owned.map(line).join('') : `<div class="note">Nothing.</div>`}
       <h2>What it did not own</h2>

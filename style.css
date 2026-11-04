@@ -282,3 +282,7 @@ details.ex blockquote{margin:10px 0;padding:12px 15px;background:#fff;
 .sumrow span:last-child{font-family:var(--mono);font-weight:600;white-space:nowrap}
 .sumrow.rule{border-top:1px solid var(--rule);margin-top:3px;padding-top:8px}
 .sumrow.tot{border-top:2px solid var(--ink);margin-top:5px;padding-top:8px;font-weight:700}
+
+/* The second stage of the year, announced rather than whispered. */
+.decomp .row.stage{border-bottom:0;padding:14px 0 4px;font-weight:700;font-size:15px;
+  color:var(--ink);letter-spacing:-.01em}

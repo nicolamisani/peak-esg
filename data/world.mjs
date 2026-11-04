@@ -116,6 +116,6 @@ export const ENDINGS = {
     adj:{ OIL:+40, MIN:+26, DEF:+10, BNK:+6, UTI:-14, AUT:-18, APP:-14, SFT:-10, SEM:-8 } }
 };
 
-export const SCENARIO = `It is the beginning of 2022. Last year there was a record inflow of
-money into ESG funds. Is ESG at its peak? You have been given the job of launching one, and you
-have five years to show your boss that she did well to trust you.`;
+export const SCENARIO = `It is the beginning of 2022. Last year brought a record inflow of money
+into ESG funds, and the trade press is asking whether ESG has peaked. You have been given the job
+of launching one, and six years to show your boss she was right to trust you.`;

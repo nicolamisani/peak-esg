@@ -1,16 +1,16 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 19:34 UTC
+// Peak ESG — the client   ·   published 2026-11-04 19:57 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11041934';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041934';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041934';
-import { NEWS, newsFor } from './data/news.mjs?v=11041934';
-import { EPS, dossierAt } from './data/evolve.mjs?v=11041934';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041934';
-import { makeNet } from './net.mjs?v=11041934';
+import * as M from './model/model.mjs?v=11041957';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041957';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041957';
+import { NEWS, newsFor } from './data/news.mjs?v=11041957';
+import { EPS, dossierAt } from './data/evolve.mjs?v=11041957';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041957';
+import { makeNet } from './net.mjs?v=11041957';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -385,21 +385,21 @@ const SCREENS = {};
 // Unicorns: one page, headings you can skim, one button out.
 const HOWTO = [
   ['You are launching a sustainable fund in January 2022',
-   'You start with €500m of other people’s money and a universe of twelve companies to invest it in. The game runs six years, 2022 to 2027.'],
-  ['You are scored on the fees you earn, not the returns you make',
-   'A management fee is a percentage of the money you are looking after, charged every year. Your score is the total of those fees across the six years. So the size of the fund matters as much as how well you pick — and the size depends on whether investors want to buy what you are selling.'],
+   'You start with \u20AC500m raised from investors, and twelve companies to put it into. Six years, 2022 to 2027.'],
+  ['Your job is to make the fees of the fund as large as possible',
+   'A management fee is a percentage of the money you look after, charged every year. Your score is the six-year total, not the returns. Size matters as much as selection, and the fund grows only if investors want what you are selling.'],
   ['Four of you to a fund',
-   'One of you creates the fund and runs it. The other three are analysts, with four companies each to research. <b>The manager is shown no company information at all</b> — not a name, not a score, nothing.'],
-  ['So the manager has to ask, and the analysts have to explain',
-   'The analysts read the dossiers; the manager decides. The only way information gets from one of you to the other is by talking.'],
+   'One of you creates the fund and runs it. The other three are analysts, with four companies each to research. <b>The manager sees no company information at all.</b> The analysts read it and brief the manager.'],
+  ['The manager has to ask, and the analysts have to explain',
+   'The manager decides. Nothing reaches the manager except by talking.'],
   ['The manager decides what the fund stands for, and how strictly',
-   'Three ways to do it: exclude activities the fund will not invest in, require companies to rank near the top of their industry, or set a minimum ESG score. A strict policy keeps you out of some good investments. A loose one is hard to defend as a sustainable fund at all.'],
-  ['The policy is written down, and checked against what the fund owns',
-   'The manager writes it in plain words before seeing any company. A clear promise brings money in. Promising more than the portfolio delivers costs money when the difference is noticed, and it makes any later scandal worse.'],
-  ['Six years, paced from the front of the room',
-   'Each year brings news about the companies, returns, and money flowing in or out. Between years you can change the fee, trade a little, and even change what the fund stands for — though investors who bought the old promise will leave.'],
+   'Three ways: exclude activities, require companies to rank near the top of their industry, or set a minimum ESG score. A strict policy keeps you out of some good investments. A loose one is hard to defend to investors.'],
+  ['Your policy will be assessed by investors',
+   'The manager writes it in plain words before seeing any company. A clear promise brings money in. Promising more than the portfolio delivers costs money when investors notice, and makes any later scandal worse.'],
+  ['Six years, one at a time',
+   'Each year brings news, returns, and money flowing in or out. Between years you can change the fee, trade a little, and even change what the fund stands for. Investors who bought the old promise will leave.'],
   ['Past performance is not a guide to what happens next',
-   'Every dossier shows three years of share price history, 2019 to 2021. It is accurate. It is also the most misleading thing on the screen.'],
+   'Every dossier shows three years of share price history, 2019 to 2021. It is accurate, and it is the first thing most analysts will quote you.'],
 ];
 SCREENS.intro = {
   html(){ return `
@@ -495,15 +495,14 @@ SCREENS.brief = {
       <p class="lede">${n} companies are yours to research${
         S.desk && n === 4 ? ` — the ${DESKS[S.desk].name.toLowerCase()}` : ''}.
         They are candidates for the fund, and nobody else in the group can see them.
-        <b>The manager cannot see any company at all</b> — not a name, not a score.</p>
-      <p class="task">Open each dossier and read it. There are seven sections: what the
-        company does, its financials, its ESG score and where it ranks, its published
-        policies, what NGOs say about it, its governance, and its press coverage.</p>
+        <b>The manager cannot see any company at all.</b></p>
+      <p class="task">Open each dossier and read it. Seven sections, from what the company
+        does to what the NGOs say about it.</p>
       <div class="note info"><b>You can recommend a company to the manager.</b> That puts
         your name beside it on their screen. There is no button for the opposite — if you
         think the fund should stay away from one of yours, you have to say so out loud.</div>
-      <p class="task">News and share prices update inside the dossiers every year, so come
-        back to them \u2014 a rating that moved or a story that broke is yours to find.</p>
+      <p class="task">News and share prices update inside the dossiers every year. A rating
+        that moved or a story that broke is yours to find.</p>
       <div class="actions"><button id="n" class="wide">Open my desk</button></div>`;
   },
   wire(m){ m.querySelector('#n').onclick=()=> go(isMgr()?'strategy':'desk'); }
@@ -761,7 +760,7 @@ SCREENS.threshold = {
     else if (n>=3) aside(`Your policy admits ${n} of the twelve companies. That is a workable range.`);
     const chars = (S.policyText||'').trim().length;
     return `<h1>${esc(str.question)}</h1>
-      <p class="task">The stricter the policy, the fewer companies the fund can own. Screen too hard and you lose investments you would have wanted; screen too softly and the fund is not promising anything.</p>
+      <p class="task">The stricter the policy, the fewer companies the fund can own.</p>
       ${ctl}
       <div class="note ${n<3?'bad':'good'}" style="margin-top:18px">
         <b>Your policy admits ${n} of the 12 companies.</b></div>
@@ -827,10 +826,9 @@ SCREENS.fee = {
               : 'Cheap. More investors will buy, and you earn less from each of them.';
     return `<h1>What do you charge?</h1>
       <p class="task">The fee is the percentage investors pay you each year for managing
-        their money. <b>It is what you are scored on</b> — your result is the total of the
-        fees investors pay over the six years. Charge more and you earn more per euro, but a
-        dear fund has to be worth it, or investors take their money elsewhere. Other funds
-        are opening at about 0.80%.</p>
+        their money, and <b>the total over the six years is your result</b>. Charge more and
+        you earn more per euro, but a dear fund has to be worth it. Other funds are opening
+        at about 0.80%.</p>
       <div class="big">${pct(f)}</div>
       <input type="range" id="r" min="10" max="200" step="5" value="${Math.round(f*10000)}">
       <div class="small" style="display:flex;justify-content:space-between"><span>0.10%</span><span>2.00%</span></div>
@@ -1162,9 +1160,8 @@ SCREENS.performance = {
             <span>${eur((startAt + d.end) / 2)}</span></div>
           <div class="sumrow"><span>Your fee</span><span>\u00d7 ${pct(isMgr() ? S.fee : (tr.fee || 0))}</span></div>
           <div class="sumrow tot"><span>Fees earned in ${y}</span><span>${eur(feeYear)}</span></div>
-          <p class="small" style="margin:10px 0 0">The fee is charged on the <b>average</b>, not on
-            what you end with. So money that arrives late in the year earns you only part of a
-            year\u2019s fee \u2014 and a fund that shrinks still earns something on the way down.</p>
+          <p class="small" style="margin:10px 0 0">The fee is charged on the <b>average</b>, not
+            on what you end with. A fund that shrinks still earns something on the way down.</p>
         </div>
         ${flows.length ? `<details class="ex"><summary>Every reason, line by line</summary>
           <div class="decomp">
@@ -1195,7 +1192,7 @@ SCREENS.performance = {
       <p class="small">This is what the policy and the portfolio cost the fund, or saved it.</p>
       ${colhead(y)}${rest.map(line).join('')}
       <div class="note">${isMgr()
-        ? 'Before you decide anything, ask your analysts what changed on their desks this year \u2014 a score that moved, a story that broke, a policy that was quietly dropped. The news reaches them and not you.'
+        ? 'Ask your analysts what changed on their desks this year. The news reaches them, not you.'
         : 'Go back through your companies before the manager decides. The scores have moved and there is new press. Whatever you do not say out loud does not reach them.'}</div>
       <div class="actions"><button id="n" class="wide">Leaderboard</button></div>`;
   },
@@ -1262,7 +1259,7 @@ SCREENS.news = {             // analyst: what happened to my four
   html(){ const y=YEARS[S.year];
     const items = myDesk().map(id=>({ c:co(id), n:newsFor(id,y) })).filter(x=>x.n);
     return `<h1>${y}</h1>
-      <p class="task">Your companies. One of these probably matters more than the others.</p>
+      <p class="task">What happened to your four this year.</p>
       ${items.map(({c,n})=>`<div class="sect" style="margin-bottom:10px">
         <div class="small">${esc(c.name)}</div>
         <b>${esc(n.t)}</b><div style="margin-top:3px">${esc(n.s)}</div></div>`).join('')}
@@ -1314,8 +1311,8 @@ SCREENS.decide = {
     const chip = (k, left, of) => `<span class="budget ${left ? '' : 'spent'}">${
       left ? `${left} of ${of} left` : `none left`} \u00b7 ${k}</span>`;
     return `<h1>${YEARS[S.year]}: do you want to change anything?</h1>
-      <p class="task">The year has not happened yet. Talk to your analysts first \u2014 they
-        have read this year\u2019s news and you have not.</p>
+      <p class="task">The year has not happened yet. Talk to your analysts first: they have
+        read this year\u2019s news.</p>
 
       <h2>1 \u00b7 The fee</h2>
       <p class="small">What investors pay you each year. Your rivals are charging about
@@ -1327,9 +1324,9 @@ SCREENS.decide = {
       <div class="note warn"><span class="risky">\u26a0</span>
         <b>${esc(STRAT_NAME[S.policy.strategy] || 'Your policy')}.</b>
         ${S.switches ? `You have changed this ${S.switches === 1 ? 'once' : S.switches + ' times'} already. ` : ''}
-        Changing it is the one expensive move on this screen: a fixed share of your
-        investors leave immediately, and the ones who care most about sustainability
-        trust you less for the rest of the game.
+        Changing it is the one expensive move here: a fixed share of your investors leave
+        immediately, and the ones who care most about sustainability trust you less from
+        then on.
         <div class="actions" style="margin-top:10px">
           <button class="ghost" id="switch">Change what the fund stands for</button></div>
       </div>`}
@@ -1474,9 +1471,9 @@ SCREENS.crisis = {
       <div class="note bad"><b>${esc(c.name)}, ${YEARS[S.year]}</b><div style="margin-top:4px">${esc(ev.note)}</div></div>
       ${outside?`<div class="note warn">This company was outside the policy you wrote, and you owned it anyway.</div>`:''}
       <h2>What do you say?</h2>
-      <p class="small">Two or three sentences. Your answer is checked against what the fund
-        actually owned. A credible answer halves the damage to the fund's reputation; it
-        cannot recover the money lost on the shares.</p>
+      <p class="small">Two or three sentences. Investors will compare what you say with what
+        the fund actually owned. A credible answer halves the damage to the fund's reputation;
+        it cannot recover the money lost on the shares.</p>
       <textarea id="t" placeholder="Our position in ${esc(c.name)}\u2026">${esc(S.crisisText||'')}</textarea>
       <div class="actions">
         <button id="n" class="wide">Issue the statement</button>
@@ -1556,9 +1553,9 @@ function resolveYear(){
   if (d.flows.scandal < -8) botSay('Chief Operating Officer',
     `<b>${Hey()}this is bad.</b> We lost <b>${eur(-d.flows.scandal)}</b> over a scandal at one of our holdings, and investors are asking what we knew.`);
   else if (d.flows.greenwashing < -5) botSay('Chief Operating Officer',
-    `<b>${Hey()}we are being caught out.</b> <b>${eur(-d.flows.greenwashing)}</b> left over the gap between what our policy promises and what we actually own. That is money we could keep just by meaning what we say.`);
+    `<b>${Hey()}we are being caught out.</b> <b>${eur(-d.flows.greenwashing)}</b> left over the gap between what our policy promises and what we actually own.`);
   else if (d.flows.fee < -6) botSay('Chief Operating Officer',
-    `<b>${Hey()}we are too expensive.</b> <b>${eur(-d.flows.fee)}</b> walked out over price alone. Think about the fee.`);
+    `<b>${Hey()}we are too expensive.</b> <b>${eur(-d.flows.fee)}</b> walked out over price alone. That is a pricing problem.`);
   else if (d.ret > d.retIndex + 4) botSay('Chief Operating Officer',
     `<b>${Hey()}good year.</b> We beat the market by <b>${pc(d.ret-d.retIndex)}</b>. We could charge more for this.`);
   else botSay('Chief Operating Officer',
@@ -1574,7 +1571,7 @@ function resolveYear(){
 SCREENS.teamfinal = {
   html(){
     const r = S.teamResult;
-    if (!r) return `<h1>Five years on</h1>
+    if (!r) return `<h1>Six years on</h1>
       <p class="lede">Waiting for your fund's result.</p>
       <div class="note">It will appear here in a moment.</div>`;
     const mine = myDesk().map(id => ({ c:co(id), w:(r.holdings||{})[id]||0, f:!!S.flags[id] }));
@@ -1583,15 +1580,14 @@ SCREENS.teamfinal = {
       <div class="big">${eur(r.fees||0)}</div>
       <div class="small">total fees earned${r.rank?` — ${ord(r.rank)} of ${r.of}`:''}</div>
       <div class="note info"><b>Portfolio ESG score ${Math.round(r.esg||0)}.</b>
-        ${r.esgRank?`Your fund is ${ord(r.esgRank)} of ${r.of} on sustainability and ${ord(r.rank)} of ${r.of} on fees.
-        Compare those two numbers across the room.`:''}</div>
+        ${r.esgRank?`Your fund is ${ord(r.esgRank)} of ${r.of} on sustainability and ${ord(r.rank)} of ${r.of} on fees.`:''}</div>
       <h2>Your four, and what the manager did with them</h2>
       <div class="decomp">${mine.map(x=>`<div class="row">
         <span>${esc(x.c.name)}${x.f?' <span class="small">· you recommended it</span>':''}</span>
         <span class="amt">${x.w?`held ${x.w}×`:'not held'}</span></div>`).join('')}</div>
       <div class="note">${
-        held.length===0 ? 'The manager held none of your four. Did they hear what you told them, or did you not push hard enough?'
-        : mine.some(x=>x.f && x.w) ? 'The manager bought something you had recommended. Was that your call or theirs — and did you tell them why?'
+        held.length===0 ? 'The manager held none of your four. Analysts are judged on what gets bought.'
+        : mine.some(x=>x.f && x.w) ? 'The manager bought something you had recommended. The credit for that is shared.'
         : 'Nothing you recommended ended up in the book.'}</div>`;
   }
 };
@@ -1617,7 +1613,7 @@ SCREENS.wait = {
 
 SCREENS.final = {
   html(){
-    if (!S.fund) return `<h1>Five years on</h1>
+    if (!S.fund) return `<h1>Six years on</h1>
       <p class="lede">This fund never opened, so there is nothing to report.</p>
       <div class="note">If that is wrong, your device may have lost its game. Nothing can be
         recovered now \u2014 but your fund\u2019s result is on the screen at the front of the room.</div>`;
@@ -1641,16 +1637,15 @@ SCREENS.final = {
     // a real spread of EUR 0.05m prints as four of the same number.
     const spread = Math.max(...rows.map(r => r.fees)) - Math.min(...rows.map(r => r.fees));
     const nHeld = Object.keys(S.holdings).length;
-    return `<h1>Five years on</h1>
+    return `<h1>Six years on</h1>
       <div class="big">${eur(S.fund.feesEarned)}</div>
       <div class="small">total fees earned over the six years — your score</div>
       <h2>The same fund under three other endings</h2>
-      <p class="small">2027 was invented for this game. These are what your fund would have
-        earned if it had gone differently.</p>
+      <p class="small">Our 2027 is a scenario, not a forecast. These are what your fund
+        would have earned if it had gone differently.</p>
       <div class="decomp">${rows.map(r=>`<div class="row"><span>${esc(r.e.label)}</span>
         <span class="amt">${eur(r.fees)}</span></div>`).join('')}</div>
-      ${spread < 0.1 ? `<div class="note warn"><b>All four are the same, and that is the
-        finding.</b> ${nHeld === 0
+      ${spread < 0.1 ? `<div class="note warn"><b>All four are the same.</b> ${nHeld === 0
           ? 'This fund never bought anything, so there was no portfolio for the world to move. Whatever 2027 did, it did it to somebody else.'
           : 'By 2027 the fund had shrunk to the floor investors will not go below, and a fund that small has almost nothing left for the market to act on. The ending stopped mattering long before it arrived.'}</div>` : ''}
       <div class="note info"><b>Portfolio ESG score: ${esg.toFixed(0)}.</b>

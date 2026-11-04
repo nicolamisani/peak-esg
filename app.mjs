@@ -1,16 +1,16 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 21:01 UTC
+// Peak ESG — the client   ·   published 2026-11-04 21:04 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11042101';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11042101';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11042101';
-import { NEWS, newsFor } from './data/news.mjs?v=11042101';
-import { EPS, dossierAt } from './data/evolve.mjs?v=11042101';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11042101';
-import { makeNet } from './net.mjs?v=11042101';
+import * as M from './model/model.mjs?v=11042104';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11042104';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11042104';
+import { NEWS, newsFor } from './data/news.mjs?v=11042104';
+import { EPS, dossierAt } from './data/evolve.mjs?v=11042104';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11042104';
+import { makeNet } from './net.mjs?v=11042104';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -172,7 +172,9 @@ function crew(){
     ${isMgr() ? `<span class="manage">Manage</span>` : ''}</div>`;
 }
 function stepLabel(){
-  const m = { intro:'how it works', join:'joining', brief:'the brief', strategy:'step 1 of 3 · strategy',
+  // Nothing for the title screen: the page says what it is, in a heading three
+  // times the size of the label underneath it.
+  const m = { join:'joining', brief:'the brief', strategy:'step 1 of 3 · strategy',
     threshold:'step 2 of 3 · policy', fee:'step 3 of 3 · price',
     wait:'waiting', desk:'your desk',
     dossier:'your desk', allocate:'the portfolio', open:'open for business',

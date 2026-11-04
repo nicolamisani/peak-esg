@@ -117,7 +117,9 @@ input[type=range]{width:100%;accent-color:var(--green);height:44px}
 .botstrip .who{font-size:11.5px;color:var(--muted);letter-spacing:.03em;text-transform:uppercase}
 .botstrip .msg{font-size:14px;line-height:1.4;margin-top:1px}
 .botstrip .msg b{font-weight:650}
-.botstrip .more{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap}
+.botstrip .more{margin-left:auto;font-size:11.5px;font-weight:600;color:var(--green);
+  background:var(--green-pale);border:1px solid var(--green-2);border-radius:999px;
+  padding:4px 11px;white-space:nowrap}
 .botstrip.quiet .msg{color:var(--soft)}
 .botlog{position:fixed;inset:0;z-index:40;background:rgba(23,28,38,.5);display:flex;align-items:flex-end}
 .botlog .sheet{background:#fff;width:100%;max-height:78dvh;overflow:auto;border-radius:14px 14px 0 0;padding:18px 16px 28px}
@@ -185,3 +187,9 @@ details.ex blockquote{margin:10px 0;padding:12px 15px;background:#fff;
 /* The year in review reads as prose, not as a list of beats. */
 .sect.review p{margin:0 0 13px;font-size:14.5px;line-height:1.62}
 .sect.review p:last-child{margin-bottom:0}
+
+/* A return, on the end-of-year screen and beside a weight. */
+.ret{font-family:var(--mono);font-weight:600;font-size:15px;white-space:nowrap;
+  padding:3px 9px;border-radius:6px;background:var(--panel);color:var(--ink-2)}
+.ret.up{background:var(--green-pale);color:var(--green)}
+.ret.down{background:var(--red-pale);color:var(--red)}

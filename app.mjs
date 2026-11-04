@@ -1,15 +1,15 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 17:44 UTC
+// Peak ESG — the client   ·   published 2026-11-04 18:00 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11041744';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041744';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041744';
-import { NEWS, newsFor } from './data/news.mjs?v=11041744';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041744';
-import { makeNet } from './net.mjs?v=11041744';
+import * as M from './model/model.mjs?v=11041800';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041800';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041800';
+import { NEWS, newsFor } from './data/news.mjs?v=11041800';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041800';
+import { makeNet } from './net.mjs?v=11041800';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -23,6 +23,7 @@ const S = {
   year:0, phase:'setup',
   resolvedYear:null,           // the last year this fund actually ran
   yearStart:null,              // the portfolio as the year opened, for the budgets
+  policySnapshot:null,         // the policy before an unconfirmed switch
   readyYear:null,              // the year this fund has said it is done deciding
   policy:{ strategy:null, excluded:[], rank:5, minScore:50 },
   policyText:'', fee:M.FEE_START,
@@ -47,7 +48,17 @@ const save = () => { try{ localStorage.setItem(KEY, JSON.stringify({
   policy:S.policy, policyText:S.policyText, ejected:S.ejected,
   resolvedYear:S.resolvedYear, readyYear:S.readyYear, crisis:S.crisis,
   fee:S.fee, holdings:S.holdings, fund:S.fund, screen:S.screen,
-  year:S.year, flags:S.flags, bot:S.bot })); }catch(e){} };
+  year:S.year, flags:S.flags, bot:S.bot,
+  // FINDING 6. None of these were saved, and each one broke something on a
+  // reload: joinedAt decided your desk, so analysts were reshuffled onto other
+  // people's companies; switches carried the trust penalty, so changing the
+  // policy and reloading erased the cost; yearStart is what the add/drop
+  // budgets are measured from, so the budgets reset; and the two assessor
+  // stamps are what stop a score being applied twice.
+  joinedAt:S.joinedAt, switches:S.switches, switching:S.switching,
+  yearStart:S.yearStart, policySnapshot:S.policySnapshot,
+  aiCrisisYear:S.aiCrisisYear, aiPitchStamp:S.aiPitchStamp,
+  adds:S.adds, drops:S.drops })); }catch(e){} };
 const load = () => { try{ return JSON.parse(localStorage.getItem(KEY)) || null; }catch(e){ return null; } };
 
 // ----------------------------------------------------------------- helpers --
@@ -311,6 +322,16 @@ function paint(){
   }
 }
 const go = s => { S.screen = s; save(); paint(); };
+
+// FINDING 9. The strategy and threshold screens edit the LIVE policy while a
+// switch is being considered, so a year that ran mid-switch handed the manager
+// her new policy without the one-off withdrawal or the lasting trust penalty —
+// a free change — and there was no way to back out once started.
+function abandonSwitch(){
+  if (S.policySnapshot) S.policy = JSON.parse(JSON.stringify(S.policySnapshot));
+  S.policySnapshot = null; S.switching = false;
+  go('decide');
+}
 
 // =============================================================================
 // SCREENS
@@ -656,9 +677,12 @@ SCREENS.strategy = {
     <p class="task">Choose one. You set how strict it is on the next screen.</p>
     <div class="choices">${M.STRATEGIES.map(s=>`<div class="choice${S.policy.strategy===s.id?' sel':''}" data-s="${s.id}">
       <div class="lbl">${esc(s.name)}</div><div class="desc">${esc(s.blurb)}</div></div>`).join('')}</div>
-    <div class="actions"><button id="n" ${S.policy.strategy?'':'disabled'}>Next</button></div>`; },
+    <div class="actions">${S.switching
+        ? `<button class="ghost" id="cancel">Cancel the change</button>` : ''}
+      <button id="n" ${S.policy.strategy?'':'disabled'}>Next</button></div>`; },
   wire(m){ m.querySelectorAll('[data-s]').forEach(c=>c.onclick=()=>{
       S.policy.strategy=c.dataset.s; paint(); });
+    const x=m.querySelector('#cancel'); if (x) x.onclick=()=>abandonSwitch();
     m.querySelector('#n').onclick=()=>go('threshold'); }
 };
 
@@ -704,6 +728,7 @@ SCREENS.threshold = {
       ${chars && chars < MIN_POLICY ? `<div class="note warn">Too short. An investor could not tell
         what this fund is for.</div>` : ''}
       <div class="actions"><button class="ghost" id="b">Back</button>
+        ${S.switching ? `<button class="ghost" id="cancel">Cancel the change</button>` : ''}
         <button id="n" ${n>=3 && chars>=MIN_POLICY?'':'disabled'}>${
           S.switching ? 'Tell the market' : 'Next'}</button></div>`;
   },
@@ -720,13 +745,14 @@ SCREENS.threshold = {
     if (pol) { pol.oninput = () => { S.policyText = pol.value; };
                pol.onblur  = () => { S.policyText = pol.value; paint(); }; }
     m.querySelector('#b').onclick=()=>{ if(pol) S.policyText=pol.value; go('strategy'); };
+    const x=m.querySelector('#cancel'); if (x) x.onclick=()=>abandonSwitch();
     m.querySelector('#n').onclick=()=>{
       if (pol) S.policyText = pol.value;
       if (!S.switching) { go('fee'); return; }
       // Changing the policy mid-game. Charged by the model in the year it
       // happened, then cleared. The new wording is assessed afresh, which is
       // why the worker keys the assessment on the text and not on the fund.
-      S.switching = false;
+      S.switching = false; S.policySnapshot = null;
       S.switches = (S.switches || 0) + 1;
       S.fund.switchPending = true;
       S.fund.switches = S.switches;
@@ -1315,8 +1341,11 @@ SCREENS.switch = {
   },
   wire(m){
     m.querySelector('#no').onclick = () => go('decide');
+    // Remember what the policy was, so an abandoned switch can be undone and
+    // a year that runs mid-switch cannot deliver a free change.
     m.querySelector('#yes').onclick = () => {
       S.switching = true;               // the policy screens return here, not to the fee
+      S.policySnapshot = JSON.parse(JSON.stringify(S.policy));
       go('strategy');
     };
   }
@@ -1393,6 +1422,15 @@ SCREENS.crisiswait = {
 };
 
 function resolveYear(){
+  // An unconfirmed switch must not take effect. The manager was part-way
+  // through choosing a new policy when the instructor ran the year; she keeps
+  // the one investors actually bought until she confirms and pays for it.
+  if (S.switching && S.policySnapshot) {
+    S.policy = JSON.parse(JSON.stringify(S.policySnapshot));
+    S.policySnapshot = null; S.switching = false;
+    botSay('Head of Distribution',
+      `${Hey()}the year ran before you confirmed the new policy, so we are still selling the old one.`);
+  }
   S.fund.holdings = S.holdings; S.fund.fee = S.fee;
   S.fund.policy = S.policy; S.fund.overclaim = S.overclaim || 0;
   if (S.appeal) S.fund.appeal = S.appeal;
@@ -1595,7 +1633,12 @@ function connect(){
     const stillSetting = isMgr() ? !S.fund
       : (!S.desk || S.screen==='join' || S.screen==='team' || S.screen==='seat');
 
-    if (st.stage === 'reveal' && !ENDINGS.includes(S.screen) && !onEnding && S.screen !== 'join') {
+    // FINDING 8. The guard covered the running and results transitions but not
+    // these two, so a manager part-way through a crisis statement was moved on
+    // anyway: her crisis year was never recorded, and the credit was applied to
+    // the FOLLOWING year against last year's holdings.
+    if (st.stage === 'reveal' && !ENDINGS.includes(S.screen) && !onEnding
+        && !BUSY.includes(S.screen) && S.screen !== 'join') {
       // The last year is the authored one, so its review comes first.
       S.reviewYear = YEARS.length - 1;
       S.reviewTo = isMgr() ? 'final' : 'teamfinal';
@@ -1603,7 +1646,7 @@ function connect(){
     } else if (stillSetting) { save(); paint(); }
     else if (st.stage === 'running' && S.screen !== 'running' && !BUSY.includes(S.screen)) {
       S.year = st.year; go('running');
-    } else if (st.stage === 'decide' && stageChanged) {
+    } else if (st.stage === 'decide' && stageChanged && !BUSY.includes(S.screen)) {
       // A new year to decide. Analysts read this year's news first.
       S.year = st.year; S.trades = 0; S.readyYear = null;
       S.yearStart = { ...S.holdings };     // the budgets measure drift from here

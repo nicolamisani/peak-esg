@@ -1,16 +1,16 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 19:10 UTC
+// Peak ESG — the client   ·   published 2026-11-04 19:21 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11041910';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041910';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041910';
-import { NEWS, newsFor } from './data/news.mjs?v=11041910';
-import { EPS, dossierAt } from './data/evolve.mjs?v=11041910';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041910';
-import { makeNet } from './net.mjs?v=11041910';
+import * as M from './model/model.mjs?v=11041921';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041921';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041921';
+import { NEWS, newsFor } from './data/news.mjs?v=11041921';
+import { EPS, dossierAt } from './data/evolve.mjs?v=11041921';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041921';
+import { makeNet } from './net.mjs?v=11041921';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -867,7 +867,9 @@ SCREENS.allocate = {
              :'<span class="small">not held</span>'}</div>`; }).join('')}
       <div class="note ${n<M.MIN_HOLDINGS?'bad':'good'}" style="margin-top:14px">
         <b>${n} holding${n===1?'':'s'}.</b> Minimum three.</div>
-      ${breach.length?`<div class="note warn"><b>${breach.length} holding${breach.length===1?'':'s'} outside the policy you wrote.</b>
+      ${breach.length?`<div class="note warn"><b>${breach.length===1
+          ? 'One holding is' : breach.length+' holdings are'} outside the policy you wrote:</b>
+        ${breach.map(b=>`${esc(b.name)} <span class="small">(${esc(b.why)})</span>`).join(', ')}.
         You are allowed to own ${breach.length===1?'it':'them'}. Investors will notice the
         difference between what you promised and what you bought.</div>`:''}
       <div class="actions"><button id="n" class="wide" ${n>=M.MIN_HOLDINGS?'':'disabled'}>Done — open for business</button></div>`;
@@ -1306,17 +1308,24 @@ SCREENS.decide = {
         // and so is undoing a purchase you just made.
         const undo = w ? !st[c.id] : !!st[c.id];
         const blocked = undo ? false : (w ? !dropsLeft : !addsLeft);
-        return `<div class="co ${w ? 'held' : ''}${blocked ? ' off' : ''}" data-id="${c.id}">
+        // A warning that counts breaches without naming them makes the manager
+        // hunt through twelve rows for the one it means.
+        const out = w && !M.admits(S.policy, c);
+        return `<div class="co ${w ? 'held' : ''}${blocked ? ' off' : ''}${out ? ' breach' : ''}" data-id="${c.id}">
           <div><div class="nm">${esc(c.name)}</div>
-            <div class="ind">${esc(c.industry)}</div>
+            <div class="ind">${esc(c.industry)}${out
+              ? ' · <b style="color:var(--red)">outside your policy</b>' : ''}</div>
             ${recNote(c.id)}</div>
           ${w ? `<button class="ghost" data-w="${c.id}" style="min-height:38px;padding:6px 14px">${w}\u00d7</button>`
               : `<span class="small">not held</span>`}</div>`; }).join('')}
       ${n < M.MIN_HOLDINGS ? `<div class="note bad">You hold ${n}. The fund needs at least
         ${M.MIN_HOLDINGS} \u2014 add ${M.MIN_HOLDINGS - n} more.</div>` : ''}
-      ${breach.length ? `<div class="note warn">${breach.length} holding${breach.length === 1 ? ' is' : 's are'}
-        outside the policy you wrote. You may keep ${breach.length === 1 ? 'it' : 'them'};
-        investors will notice.</div>` : ''}
+      ${breach.length ? `<div class="note warn"><b>${breach.length === 1
+          ? 'One holding is' : breach.length + ' holdings are'} outside the policy you wrote:</b>
+        ${breach.map(b => `${esc(b.name)} <span class="small">(${esc(b.why)})</span>`).join(', ')}.
+        ${breach.length === 1 ? 'It is' : 'They are'} marked below. You may keep
+        ${breach.length === 1 ? 'it' : 'them'}; investors will notice the difference between what
+        you promised and what you own.</div>` : ''}
 
       ${n >= M.MIN_HOLDINGS ? `<div class="actions">
         <button id="ready" class="${said ? 'ghost' : 'wide'}">${said
@@ -1589,6 +1598,14 @@ SCREENS.final = {
     const rows = Object.entries(ENDINGS).map(([k,e])=>({ k, e,
       fees: k==='authored' ? live : live + (M.runUnderEnding(base,k).feesEarned - ref) }));
     const esg = M.portfolioESG(S.holdings,5);
+    // Four identical figures under four different headings reads as a broken
+    // screen, and it is reachable two ways: a fund that never bought anything
+    // (the world cannot move a portfolio that does not exist) and a fund whose
+    // assets collapsed to the floor, where the ending has almost nothing left
+    // to act on. The second is the interesting one and was invisible, because
+    // a real spread of EUR 0.05m prints as four of the same number.
+    const spread = Math.max(...rows.map(r => r.fees)) - Math.min(...rows.map(r => r.fees));
+    const nHeld = Object.keys(S.holdings).length;
     return `<h1>Five years on</h1>
       <div class="big">${eur(S.fund.feesEarned)}</div>
       <div class="small">total fees earned over the six years — your score</div>
@@ -1597,12 +1614,16 @@ SCREENS.final = {
         earned if it had gone differently.</p>
       <div class="decomp">${rows.map(r=>`<div class="row"><span>${esc(r.e.label)}</span>
         <span class="amt">${eur(r.fees)}</span></div>`).join('')}</div>
+      ${spread < 0.1 ? `<div class="note warn"><b>All four are the same, and that is the
+        finding.</b> ${nHeld === 0
+          ? 'This fund never bought anything, so there was no portfolio for the world to move. Whatever 2027 did, it did it to somebody else.'
+          : 'By 2027 the fund had shrunk to the floor investors will not go below, and a fund that small has almost nothing left for the market to act on. The ending stopped mattering long before it arrived.'}</div>` : ''}
       <div class="note info"><b>Portfolio ESG score: ${esg.toFixed(0)}.</b>
         You were not scored on this. Every fund's is about to go on the board.</div>
-      <div class="note">${rows[0].fees >= Math.max(...rows.map(r=>r.fees)) - 0.5
+      ${spread < 0.1 ? '' : `<div class="note">${rows[0].fees >= Math.max(...rows.map(r=>r.fees)) - 0.5
         ? 'Your fund did as well or better under every ending, so the result did not depend on guessing which one would happen.'
         : `Under the best of the other three you would have earned ${eur(Math.max(...rows.slice(1).map(r=>r.fees)))};
-           under the worst, ${eur(Math.min(...rows.slice(1).map(r=>r.fees)))}. Your result depended on which future turned out to be true.`}</div>`;
+           under the worst, ${eur(Math.min(...rows.slice(1).map(r=>r.fees)))}. Your result depended on which future turned out to be true.`}</div>`}`;
   }
 };
 

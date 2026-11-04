@@ -286,3 +286,8 @@ details.ex blockquote{margin:10px 0;padding:12px 15px;background:#fff;
 /* The second stage of the year, announced rather than whispered. */
 .decomp .row.stage{border-bottom:0;padding:14px 0 4px;font-weight:700;font-size:15px;
   color:var(--ink);letter-spacing:-.01em}
+
+/* A holding that sits outside the policy the manager wrote. Named in the
+   warning and marked on the row, so nobody has to hunt for it. */
+.co.breach{border-color:var(--red);background:var(--red-pale)}
+.co.breach.held{border-color:var(--red);background:var(--red-pale)}

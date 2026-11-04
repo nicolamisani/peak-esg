@@ -1,16 +1,16 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 20:49 UTC
+// Peak ESG — the client   ·   published 2026-11-04 21:00 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11042049';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11042049';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11042049';
-import { NEWS, newsFor } from './data/news.mjs?v=11042049';
-import { EPS, dossierAt } from './data/evolve.mjs?v=11042049';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11042049';
-import { makeNet } from './net.mjs?v=11042049';
+import * as M from './model/model.mjs?v=11042100';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11042100';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11042100';
+import { NEWS, newsFor } from './data/news.mjs?v=11042100';
+import { EPS, dossierAt } from './data/evolve.mjs?v=11042100';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11042100';
+import { makeNet } from './net.mjs?v=11042100';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -263,7 +263,7 @@ function teamSheet(){
 // snapshot, so you were thrown back to the top of a dossier while reading it.
 // Now each of the three regions is compared and only written when it changed,
 // and the scroll only resets when the screen actually changes.
-const DOM = { rail:null, body:null, strip:null, screen:null, bot:null };
+const DOM = { rail:null, body:null, strip:null, screen:null, bot:null, botCount:null };
 
 function render(){
   const scr = SCREENS[S.screen] || SCREENS.join;
@@ -301,6 +301,19 @@ function render(){
   if (wrap && stripHtml !== DOM.strip) {
     wrap.innerHTML = stripHtml;
     DOM.strip = stripHtml;
+    // A new message from the COO arrives at the bottom of a screen the student
+    // is already reading, and on a phone it is below the fold of their
+    // attention even when it is on screen. Flash the bar for a few seconds when
+    // the message count actually GROWS - not when the strip merely re-renders,
+    // which it does on every snapshot, and not on the first paint after a
+    // reload, when every old message would flash at once.
+    const n = (S.bot || []).length;
+    if (DOM.botCount !== null && n > DOM.botCount) {
+      const bar = document.getElementById('bot');
+      if (bar) { bar.classList.add('flash');
+                 setTimeout(() => bar.classList.remove('flash'), 2800); }
+    }
+    DOM.botCount = n;
     const b = document.getElementById('bot');
     // No bar on an analyst's screen any more, so nothing should be reserved
     // for one: main pads itself by --bot, which would otherwise keep the last
@@ -881,8 +894,12 @@ SCREENS.allocate = {
     // funds were in the same year and the macro briefing arrived before the
     // trade it was about to explain.
     m.querySelector('#n').onclick=()=>{
-      publishMe();
       const st = S.net ? S.net.session() : null;
+      // Only for 2022, and only if the year has not already moved past it.
+      if (!st || st.stage === 'setup') {
+        S.readyYear = 0; S.yearStart = { ...S.holdings };
+      }
+      publishMe();
       if (st && (st.stage === 'decide' || st.stage === 'running')) {
         S.year = st.year || 0; S.trades = 0; go(st.stage === 'running' ? 'running' : 'decide'); }
       else go('open');
@@ -914,9 +931,10 @@ SCREENS.open = {
         : `<div class="note good">Every holding is inside the policy you wrote.</div>`}
       ${S.aiNote ? '' : `<div class="note">Your Chief Operating Officer is reading your policy
         statement now. Watch the bar at the bottom.</div>`}
-      <div class="waitbox"><b>Waiting for 2022 to open</b>
-        <div class="small" style="margin-top:4px">The instructor starts the first year from the
-          front of the room. Nothing happens to your money until then.</div></div>`;
+      <div class="waitbox"><b>You are done for 2022</b>
+        <div class="small" style="margin-top:4px">The front of the room can see that your fund is
+          built. 2022 runs once every fund is ready. Nothing happens to your money until then, and
+          you can still change anything above by going back.</div></div>`;
   },
   wire(){ const st = S.net ? S.net.session() : null;
     // A manager who finishes setting up after the first year has already been

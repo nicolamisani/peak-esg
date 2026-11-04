@@ -316,3 +316,16 @@ details.ex blockquote{margin:10px 0;padding:12px 15px;background:#fff;
    reclaim the padding that was reserved for it. */
 body.typing .botstrip{display:none}
 body.typing main{padding-bottom:20px}
+
+/* A new message from the COO flashes for a few seconds. Three pulses, then it
+   settles: enough to catch an eye that is somewhere else on the screen,
+   short enough not to become wallpaper. */
+@keyframes botflash{
+  0%, 22%, 44%  {background:var(--green-pale); border-top-color:var(--green)}
+  11%, 33%, 100%{background:var(--paper);      border-top-color:var(--rule)}
+}
+.botstrip.flash{animation:botflash 2.6s ease-in-out 1; border-top-width:2px}
+.botstrip.flash .who{color:var(--green)}
+@media (prefers-reduced-motion:reduce){
+  .botstrip.flash{animation:none;background:var(--green-pale);border-top-color:var(--green)}
+}

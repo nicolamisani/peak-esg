@@ -329,3 +329,8 @@ body.typing main{padding-bottom:20px}
 @media (prefers-reduced-motion:reduce){
   .botstrip.flash{animation:none;background:var(--green-pale);border-top-color:var(--green)}
 }
+
+/* The course line, as Greenmarket carries it. Title screen and the ending
+   only: in between, a student is playing, not reading a title page. */
+.coursefoot{text-align:center;color:var(--soft);font-size:12.5px;
+  padding:18px 0 10px;margin:22px 0 0;border-top:1px solid var(--rule)}

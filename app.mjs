@@ -1,16 +1,16 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 21:04 UTC
+// Peak ESG — the client   ·   published 2026-11-04 21:05 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11042104';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11042104';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11042104';
-import { NEWS, newsFor } from './data/news.mjs?v=11042104';
-import { EPS, dossierAt } from './data/evolve.mjs?v=11042104';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11042104';
-import { makeNet } from './net.mjs?v=11042104';
+import * as M from './model/model.mjs?v=11042105';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11042105';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11042105';
+import { NEWS, newsFor } from './data/news.mjs?v=11042105';
+import { EPS, dossierAt } from './data/evolve.mjs?v=11042105';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11042105';
+import { makeNet } from './net.mjs?v=11042105';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -428,7 +428,8 @@ SCREENS.intro = {
     <h2>How it works</h2>
     ${HOWTO.map(([h,p])=>`<div class="sect" style="margin-bottom:12px">
       <b>${esc(h)}</b><div style="margin-top:3px">${p}</div></div>`).join('')}
-    <div class="actions"><button id="n" class="wide">I'm in</button></div>`; },
+    <div class="actions"><button id="n" class="wide">I'm in</button></div>
+    <p class="coursefoot">30296 Global Sustainability Strategy \u00b7 Bocconi University</p>`; },
   wire(m){ m.querySelector('#n').onclick=()=>go('join'); }
 };
 
@@ -1278,7 +1279,9 @@ function downloadCSV(){
   };
   const row = (...c) => c.map(cell).join(',');
   const out = [
-    row('Peak ESG', 'Bocconi 30296'),
+    row('Peak ESG'),
+    row('30296 Global Sustainability Strategy \u00b7 Bocconi University'),
+    '',
     row('Fund', s.fund), row('Fund manager', s.manager),
     row('Analysts', s.analysts.join(' / ') || '(none)'),
     '',
@@ -1333,7 +1336,9 @@ function downloadAnalystCSV(){
   const row = (...c) => c.map(cell).join(',');
   const mine = myDesk().map(id => ({ c: co(id), w: (r.holdings||{})[id] || 0, f: !!S.flags[id] }));
   const out = [
-    row('Peak ESG', 'Bocconi 30296'),
+    row('Peak ESG'),
+    row('30296 Global Sustainability Strategy \u00b7 Bocconi University'),
+    '',
     row('Fund', r.name || S.fundName || ''),
     row('Analyst', S.who || ''),
     row('Desk', (DESKS[S.desk] || {}).name || ''),
@@ -1855,7 +1860,8 @@ SCREENS.final = {
       <div class="actions" style="margin-top:22px">
         <button id="csv" class="wide">Save our result as a file</button></div>
       <p class="small" style="text-align:center">A spreadsheet of everything above, including
-        every year, every scandal and the assessment, saved to this device.</p>`;
+        every year, every scandal and the assessment, saved to this device.</p>
+      <p class="coursefoot">30296 Global Sustainability Strategy \u00b7 Bocconi University</p>`;
   },
   wire(m){ const b = m.querySelector('#csv');
     if (b) b.onclick = () => { try { downloadCSV(); }

@@ -160,3 +160,28 @@ input[type=range]{width:100%;accent-color:var(--green);height:44px}
   display:flex;gap:6px 14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
 .crew .f{font-weight:700;color:var(--ink)}
 .crew b{color:var(--green);font-weight:600}
+
+/* A recommendation, in words. The red dot this replaces was invisible on a
+   phone held at arm's length, which is how every one of these is read. */
+.rec{display:inline-block;margin-top:4px;font-size:12px;font-weight:650;
+  color:var(--green);background:var(--green-pale);border:1px solid var(--green-2);
+  border-radius:999px;padding:2px 9px;white-space:nowrap}
+.co .rec{margin-top:5px}
+
+/* The worked policy example: folded away, because an example left open on the
+   screen while you write becomes a template to copy. */
+details.ex{border:1px solid var(--rule-2);border-radius:9px;padding:0 15px;margin:14px 0;
+  background:var(--panel)}
+details.ex summary{cursor:pointer;padding:13px 0;font-size:13.5px;font-weight:600;
+  color:var(--green);list-style:none}
+details.ex summary::-webkit-details-marker{display:none}
+details.ex summary::before{content:'▶';font-size:9px;margin-right:7px;vertical-align:1px}
+details.ex[open] summary::before{content:'▼'}
+details.ex[open]{padding-bottom:14px}
+details.ex blockquote{margin:10px 0;padding:12px 15px;background:#fff;
+  border-left:3px solid var(--green-2);border-radius:0 7px 7px 0;
+  font-size:14px;line-height:1.55;color:var(--ink-2)}
+
+/* The year in review reads as prose, not as a list of beats. */
+.sect.review p{margin:0 0 13px;font-size:14.5px;line-height:1.62}
+.sect.review p:last-child{margin-bottom:0}

@@ -1,15 +1,16 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 18:50 UTC
+// Peak ESG — the client   ·   published 2026-11-04 19:10 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11041850';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041850';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041850';
-import { NEWS, newsFor } from './data/news.mjs?v=11041850';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041850';
-import { makeNet } from './net.mjs?v=11041850';
+import * as M from './model/model.mjs?v=11041910';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041910';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041910';
+import { NEWS, newsFor } from './data/news.mjs?v=11041910';
+import { EPS, dossierAt } from './data/evolve.mjs?v=11041910';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041910';
+import { makeNet } from './net.mjs?v=11041910';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -95,6 +96,34 @@ const myDesk = () => deskFor(S.desk, S.analystsPresent || 3);
 // decision it would decide. Repairing the dead `phase === 'play'` test opened
 // this leak, which the bug had been hiding by showing nothing at all.
 const lastDone = () => (S.phase === 'results' || S.phase === 'reveal') ? S.year : S.year - 1;
+
+// A company's share price as an index, carrying the 2019-21 history forward
+// through every year the game has actually run. chart[] is 2019, 2020, 2021.
+function priceSeries(c, upto) {
+  const px = [...c.chart];
+  for (let i = 0; i <= upto && i < YEARS.length; i++)
+    px.push(px[px.length - 1] * (1 + M.ret(c, i, 'authored') / 100));
+  return px;
+}
+// A rolling window of the same shape as the authored history: three points,
+// which chart3y already calls three years. In 2022 it is still the 2019-21
+// chart, so the trap fires exactly when the opening portfolio is chosen; after
+// that it rolls forward a year at a time.
+function threeYear(c, t) {
+  const px = priceSeries(c, t);
+  const end = px.length - 1, start = Math.max(0, end - 2);
+  return { pc: (px[end] / px[start] - 1) * 100, to: t < 0 ? YEARS[0] - 1 : YEARS[t] };
+}
+// Price over earnings, both moving. EPS is authored (see data/evolve.mjs);
+// rolling the price alone would assume flat earnings and print a number that
+// looks measured and is not.
+function peAt(c, t) {
+  if (t < 0) return c.pe;
+  const px = priceSeries(c, t);
+  const eps = (EPS[c.id] || [])[t];
+  if (!eps || eps <= 0) return null;
+  return c.pe * (px[px.length - 1] / c.chart[2]) / (eps / 100);
+}
 const myName = () => (S.who || '').trim();
 // Both heads open by naming you. A line addressed to nobody in particular is
 // read by nobody in particular, and this bar is the only voice in the game.
@@ -594,12 +623,13 @@ const FACT_LABEL = { ceo:'Chief executive', employees:'Employees', founded:'Foun
 SCREENS.dossier = {
   html(){
     const c = co(S.openCo); const s = S.openSect;
-    const spark = (()=>{ const v=c.chart, lo=Math.min(...v), hi=Math.max(...v);
-      const pts = v.map((x,i)=>`${6+i*52},${44-((x-lo)/((hi-lo)||1))*32}`).join(' ');
-      return `<svg class="spark" width="124" height="52" viewBox="0 0 124 52">
-        <polyline points="${pts}" fill="none" stroke="var(--green)" stroke-width="2.5"
-          stroke-linejoin="round" stroke-linecap="round"/>
-        <line x1="2" y1="49" x2="122" y2="49" stroke="var(--rule-2)" stroke-width="1"/></svg>`; })();
+    // Everything below is the dossier as it stood at the end of the last year
+    // that actually finished. Only the Media tab used to move; the score, the
+    // rank, the policy checklist, the NGO section and the board were frozen at
+    // 2021 for the whole game, so a second reading told you nothing.
+    const t = lastDone();
+    const D = dossierAt(c, t, YEARS);
+    const asOf = t < 0 ? 2021 : YEARS[t];
     let body='';
     // What a screener would show you first: what the company actually does, in
     // prose, before any number. Several of these carry a planted signal in
@@ -610,27 +640,37 @@ SCREENS.dossier = {
       <div class="kv"><span class="k">Industry</span><span class="v">${esc(c.industry)}</span></div>
       ${Object.entries(c.facts||{}).map(([k,v])=>
         `<div class="kv"><span class="k">${esc(FACT_LABEL[k]||k)}</span><span class="v">${esc(v)}</span></div>`).join('')}`;
-    if (s==='fin') body = `
-      <div class="small" style="margin-bottom:2px">Share price, 2019 to 2021</div>
-      ${spark}<div style="font-family:var(--mono);font-weight:600;font-size:19px">${esc(c.chart3y)} over three years</div>
-      <div class="kv"><span class="k">Price / earnings</span><span class="v">${c.pe}</span></div>
+    if (s==='fin') { const ty = threeYear(c, t), pe = peAt(c, t);
+      body = `
+      <div class="small" style="margin-bottom:2px">Share price, three years to ${ty.to}</div>
+      <div class="big ${ty.pc>=0?'up':'down'}" style="font-size:27px;margin:2px 0 2px">${pc(ty.pc,0)}</div>
+      <div class="small" style="margin-bottom:12px">over the three years to ${ty.to}</div>
+      <div class="kv"><span class="k">Price / earnings</span><span class="v">${
+        pe === null ? 'n/a \u2014 no earnings' : pe > 99 ? '99+' : pe.toFixed(1)}</span></div>
       <div class="kv"><span class="k">Region</span><span class="v">${esc(c.region)}</span></div>
       ${c.subsidiaries?`<div class="kv"><span class="k">Subsidiaries</span><span class="v">${c.subsidiaries.map(esc).join('<br>')}</span></div>`:''}
-      ${c.water?`<div class="kv"><span class="k">Water</span><span class="v">${esc(c.water)}</span></div>`:''}`;
-    if (s==='esg') body = `
-      <div class="kv"><span class="k">In-house score</span><span class="v">${c.esg0} / 100</span></div>
-      <div class="kv"><span class="k">Rank in its industry</span><span class="v">${esc(c.rank)}</span></div>
+      ${c.water?`<div class="kv"><span class="k">Water</span><span class="v">${esc(c.water)}</span></div>`:''}
+      <div class="note" style="margin-top:14px">Price divided by a year's earnings per share:
+        how many years of current profit you are paying for the shares. <b>The higher the number,
+        the more expensive the company</b> relative to what it earns today. Across developed
+        markets the long-run average sits somewhere around 15 to 20, depending on the period you
+        pick \u2014 so treat it as a rough yardstick, not a line.</div>`; }
+    if (s==='esg') { const sc = t < 0 ? c.esg0 : c.esg[t], moved = sc - c.esg0;
+      body = `
+      <div class="kv"><span class="k">In-house score</span><span class="v">${sc} / 100${
+        moved ? ` <span class="small">(${moved>0?'+':'\u2212'}${Math.abs(moved)} since 2021)</span>` : ''}</span></div>
+      <div class="kv"><span class="k">Rank in its industry</span><span class="v">${esc(D.rank)}</span></div>
       <div class="kv"><span class="k">Excluded activities</span><span class="v">${
-        c.activities.length?c.activities.map(a=>esc(ACTIVITIES[a])).join('<br>'):'None'}</span></div>`;
+        c.activities.length?c.activities.map(a=>esc(ACTIVITIES[a])).join('<br>'):'None'}</span></div>`; }
     if (s==='pol') body = Object.entries({
-      'Climate transition plan':c.policies.transition, 'Human rights policy':c.policies.humanRights,
-      'Scope 3 disclosure':c.policies.scope3, 'Supplier audit':c.policies.supplierAudit })
+      'Climate transition plan':D.policies.transition, 'Human rights policy':D.policies.humanRights,
+      'Scope 3 disclosure':D.policies.scope3, 'Supplier audit':D.policies.supplierAudit })
       .map(([k,v])=>`<div class="kv"><span class="k">${k}</span><span class="v">${esc(v)}</span></div>`).join('');
-    if (s==='ngo') body = c.ngo.map(x=>`<p>${esc(x)}</p>`).join('');
+    if (s==='ngo') body = D.ngo.map(x=>`<p>${esc(x)}</p>`).join('');
     if (s==='gov') body = `
-      <div class="kv"><span class="k">Chair</span><span class="v">${esc(c.governance.chair)}</span></div>
-      <div class="kv"><span class="k">Chief executive</span><span class="v">${esc(c.governance.ceoChange)}</span></div>
-      <div class="kv"><span class="k">Largest holder</span><span class="v">${esc(c.governance.holder)}</span></div>`;
+      <div class="kv"><span class="k">Chair</span><span class="v">${esc(D.governance.chair)}</span></div>
+      <div class="kv"><span class="k">Chief executive</span><span class="v">${esc(D.governance.ceoChange)}</span></div>
+      <div class="kv"><span class="k">Largest holder</span><span class="v">${esc(D.governance.holder)}</span></div>`;
     if (s==='news'){
       // Same rule in the dossier: news only up to the last finished year.
       const upto = lastDone() >= 0 ? YEARS[lastDone()] : 2021;
@@ -643,6 +683,7 @@ SCREENS.dossier = {
     }
     return `<h1>${esc(c.name)}</h1>
       <p class="lede">${esc(c.blurb)}</p>
+      <p class="small">Everything below is the file as it stands at the end of <b>${asOf}</b>.</p>
       <div class="chips">${SECTIONS.map(([k,l])=>`<div class="chip${s===k?' on':''}" data-s="${k}">${l}</div>`).join('')}</div>
       <div class="sect">${body}</div>
       <div class="actions">

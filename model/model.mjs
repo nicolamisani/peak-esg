@@ -7,8 +7,8 @@
 // problems findable before a class saw them.
 // =============================================================================
 
-import { UNIVERSE, ACTIVITIES } from '../data/universe.mjs?v=11041850';
-import { INDEX, YEARS, COMPRESSION, ENDINGS } from '../data/world.mjs?v=11041850';
+import { UNIVERSE, ACTIVITIES } from '../data/universe.mjs?v=11041910';
+import { INDEX, YEARS, COMPRESSION, ENDINGS } from '../data/world.mjs?v=11041910';
 
 // ---------------------------------------------------------------- constants --
 export const START_AUM   = 500;              // EUR m

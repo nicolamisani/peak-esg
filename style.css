@@ -32,8 +32,6 @@ body{min-height:100dvh;display:flex;flex-direction:column}
 .rail .dots i{width:7px;height:7px;border-radius:50%;background:var(--rule-2);display:block}
 .rail .dots i.on{background:var(--green)}
 .rail .dots i.now{background:var(--ink);transform:scale(1.25)}
-.rail .clock{font-family:var(--mono);font-size:15px;font-weight:600;color:var(--red);
-  background:var(--red-pale);padding:2px 9px;border-radius:5px}
 
 /* ---- the screen --------------------------------------------------------- */
 main{flex:1;padding:20px 16px calc(var(--bot) + 20px);max-width:760px;width:100%;margin:0 auto}
@@ -291,3 +289,24 @@ details.ex blockquote{margin:10px 0;padding:12px 15px;background:#fff;
    warning and marked on the row, so nobody has to hunt for it. */
 .co.breach{border-color:var(--red);background:var(--red-pale)}
 .co.breach.held{border-color:var(--red);background:var(--red-pale)}
+
+/* The podium. Second on the left, first in the middle, third on the right,
+   revealed in the order 3, 2, 1 so the room has somewhere to look. */
+.podiumwrap{display:flex;align-items:flex-end;justify-content:center;gap:10px;
+  min-height:240px;margin:24px 0 4px}
+.podiumwrap .ghost-slot{flex:1;max-width:160px}
+.plinth{flex:1;max-width:160px;display:flex;flex-direction:column;align-items:center;
+  animation:rise .55s cubic-bezier(.2,.9,.3,1.2) both}
+@keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+.plinth .medal{font-size:31px;line-height:1;margin-bottom:5px}
+.plinth .nm{font-size:14.5px;font-weight:700;text-align:center;line-height:1.25;
+  margin-bottom:3px;overflow-wrap:anywhere}
+.plinth .pt{font-family:var(--mono);font-size:13px;color:var(--muted);margin-bottom:7px}
+.plinth .block{width:100%;border-radius:9px 9px 0 0;display:flex;align-items:flex-start;
+  justify-content:center;padding-top:9px;font-size:26px;font-weight:700;color:rgba(255,255,255,.6)}
+.plinth.p1 .block{height:124px;background:linear-gradient(180deg,#f6c344,#b78a1d)}
+.plinth.p2 .block{height:90px;background:linear-gradient(180deg,#cfd8e0,#8a97a3)}
+.plinth.p3 .block{height:64px;background:linear-gradient(180deg,#cd9163,#8d5f3c)}
+.plinth.me .nm{color:var(--green)}
+@media(max-width:520px){ .podiumwrap{gap:6px;min-height:205px} .plinth .nm{font-size:13px} }
+@media (prefers-reduced-motion:reduce){ .plinth{animation:none} }

@@ -1,16 +1,16 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 19:21 UTC
+// Peak ESG — the client   ·   published 2026-11-04 19:34 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11041921';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041921';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041921';
-import { NEWS, newsFor } from './data/news.mjs?v=11041921';
-import { EPS, dossierAt } from './data/evolve.mjs?v=11041921';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041921';
-import { makeNet } from './net.mjs?v=11041921';
+import * as M from './model/model.mjs?v=11041934';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041934';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041934';
+import { NEWS, newsFor } from './data/news.mjs?v=11041934';
+import { EPS, dossierAt } from './data/evolve.mjs?v=11041934';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041934';
+import { makeNet } from './net.mjs?v=11041934';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -148,11 +148,9 @@ function rail() {
   const steps = b ? `<span class="beats">${
     ['Decide','The year runs','Results'].map((t,i)=>
       `<i class="${i+1===b?'on':i+1<b?'done':''}">${t}</i>`).join('')}</span>` : '';
-  const left = S.countdownEnds ? Math.max(0, Math.round((S.countdownEnds - Date.now())/1000)) : 0;
-  const cd = left ? `<span class="clock">${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}</span>` : '';
   return `<header class="top"><div class="rail">
     <span class="mark">${MARK} Peak <span class="esg">ESG</span></span>
-    <span class="where">${esc(where)}</span>${cd}
+    <span class="where">${esc(where)}</span>
     <span class="dots">${dots}</span></div>${steps}${crew()}</header>`;
 }
 // Who is on this fund, under the rail, on every screen. The player's own name
@@ -180,6 +178,7 @@ function stepLabel(){
     dossier:'your desk', allocate:'the portfolio', open:'open for business',
     team:'which fund?', seat:'taking a seat', teamfinal:'the result', final:'the result',
     switch:'changing the policy', review:'the year in review', decide:'your move',
+    podium:'the podium',
     performance:'how your fund did',
     standby:'brief the manager', news:'the news' };
   return m[S.screen] || '';
@@ -1203,6 +1202,42 @@ SCREENS.performance = {
   wire(m){ m.querySelector('#n').onclick = () => go('standings'); }
 };
 
+// ----------------------------------------------------------- the podium ----
+// Third, then second, then first, then everyone: the instructor walks it from
+// the front of the room, three seconds a place, and every device turns over
+// together. The same shape as Greenmarket's, because the room already knows
+// how to watch it.
+const MEDAL = { 1:'\u{1F947}', 2:'\u{1F948}', 3:'\u{1F949}' };
+function plinth(f, place, step) {
+  if (step < (place === 3 ? 1 : place === 2 ? 2 : 3) || !f) return '<div class="ghost-slot"></div>';
+  const me = isMyFund(f);
+  return `<div class="plinth p${place}${me ? ' me' : ''}">
+    <div class="medal">${MEDAL[place]}</div>
+    <div class="nm">${esc(f.name || 'Unnamed')}${me ? '<br><span class="small">(yours)</span>' : ''}</div>
+    <div class="pt">${eur(f.fees || 0)}</div>
+    <div class="block">${place}</div>
+  </div>`;
+}
+SCREENS.podium = {
+  html(){
+    const step = S.podiumStep || 0;
+    const board = (S.board || []).slice().sort((a, b) => (b.fees || 0) - (a.fees || 0));
+    const at = n => board[n - 1];
+    return `<h1>${step === 0 ? 'The results are in' : step < 4 ? 'The podium' : 'The leaderboard'}</h1>
+      <p class="task">${step === 0
+        ? 'Watch the front of the room. The places are read out one at a time.'
+        : `${board.length} fund${board.length === 1 ? '' : 's'}, six years, the same twelve companies. Ranked on the fees each one earned.`}</p>
+      <div class="podiumwrap">
+        ${plinth(at(2), 2, step)}${plinth(at(1), 1, step)}${plinth(at(3), 3, step)}
+      </div>
+      ${step >= 4 ? `<div class="decomp" style="margin-top:20px">${board.map((f, i) => `
+        <div class="row${isMyFund(f) ? ' tot' : ''}">
+          <span>${MEDAL[i + 1] || (i + 1) + '.'} ${esc(f.name || 'Unnamed')}${
+            isMyFund(f) ? ' \u2014 yours' : ''}</span>
+          <span class="amt">${eur(f.fees || 0)}</span></div>`).join('')}</div>` : ''}`;
+  }
+};
+
 // ------------------------------------------------------------- the room ----
 SCREENS.standings = {
   html(){
@@ -1641,7 +1676,7 @@ function connect(){
     S.phase = st.stage || S.phase;          // `phase` belongs to the Firestore rules
     const stageChanged = st.stage !== prevStage || st.year !== prevYear;
     S.peerFee = S.net.peerFee(M.FEE_START);
-    S.countdownEnds = st.countdownEnds || null;
+    S.podiumStep = st.podiumStep || 0;
     // what the assessor made of the prose
     const mine = st.mine || {};
     S.board = st.board || S.board || [];
@@ -1712,7 +1747,9 @@ function connect(){
     // these two, so a manager part-way through a crisis statement was moved on
     // anyway: her crisis year was never recorded, and the credit was applied to
     // the FOLLOWING year against last year's holdings.
-    if (st.stage === 'reveal' && !ENDINGS.includes(S.screen) && !onEnding
+    if (st.stage === 'podium' && !BUSY.includes(S.screen) && S.screen !== 'join') {
+      if (S.screen !== 'podium') go('podium'); else paint();
+    } else if (st.stage === 'reveal' && !ENDINGS.includes(S.screen) && !onEnding
         && !BUSY.includes(S.screen) && S.screen !== 'join') {
       // The last year is the authored one, so its review comes first.
       S.reviewYear = YEARS.length - 1;

@@ -1,16 +1,16 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 21:05 UTC
+// Peak ESG — the client   ·   published 2026-11-04 21:07 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11042105';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11042105';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11042105';
-import { NEWS, newsFor } from './data/news.mjs?v=11042105';
-import { EPS, dossierAt } from './data/evolve.mjs?v=11042105';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11042105';
-import { makeNet } from './net.mjs?v=11042105';
+import * as M from './model/model.mjs?v=11042107';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11042107';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11042107';
+import { NEWS, newsFor } from './data/news.mjs?v=11042107';
+import { EPS, dossierAt } from './data/evolve.mjs?v=11042107';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11042107';
+import { makeNet } from './net.mjs?v=11042107';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -1845,8 +1845,9 @@ SCREENS.final = {
       <div class="decomp">
         <div class="row stage"><span>Year</span><span>fund / market</span></div>
         ${s.history.map(y => `<div class="row"><span>${y.year}</span>
-          <span class="amt ${y.ret >= y.market ? 'pos' : 'neg'}">${pc(y.ret)}
-            <span class="small">vs ${pc(y.market)}</span></span></div>`).join('')}
+          <span class="amt ${y.ret >= 0 ? 'pos' : 'neg'}">${pc(y.ret)}
+            <span class="small">vs ${pc(y.market)} ${
+              y.ret >= y.market ? '\u25b2' : '\u25bc'}</span></span></div>`).join('')}
       </div>
 
       <h2>What your Chief Operating Officer makes of it</h2>

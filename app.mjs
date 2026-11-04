@@ -1,15 +1,15 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 17:07 UTC
+// Peak ESG — the client   ·   published 2026-11-04 17:09 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11041707';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041707';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041707';
-import { NEWS, newsFor } from './data/news.mjs?v=11041707';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041707';
-import { makeNet } from './net.mjs?v=11041707';
+import * as M from './model/model.mjs?v=11041709';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041709';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041709';
+import { NEWS, newsFor } from './data/news.mjs?v=11041709';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041709';
+import { makeNet } from './net.mjs?v=11041709';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -1048,6 +1048,11 @@ SCREENS.performance = {
       ${r === null ? `<div class="note">Waiting for your fund\u2019s numbers.</div>` : `
         <div class="big ${r >= 0 ? 'up' : 'down'}">${pc(r)}</div>
         <div class="small">your fund\u2019s return in ${y} \u2014 the market returned ${pc(idx)}</div>
+        ${!d ? `<div class="decomp" style="margin-top:16px">
+          ${aum === null ? '' : `<div class="row"><span>The fund is now worth</span><span class="amt">${eur(aum)}</span></div>`}
+          ${feeYear === null ? '' : `<div class="row"><span>Fees earned in ${y}</span><span class="amt">${eur(feeYear)}</span></div>`}
+          <div class="row tot"><span>Fees earned so far</span><span class="amt">${eur(total)}</span></div>
+        </div>` : `
         <div class="story">
           <p><b>Your fund started ${y} at ${eur(startAt)} and ended at ${eur(d.end)}.</b></p>
           <p><b>The stock of the companies you held ${shares >= 0 ? 'rose' : 'fell'} ${eur(Math.abs(shares))}.</b>
@@ -1060,7 +1065,7 @@ SCREENS.performance = {
               (${eur(outs[0][1])}).` : ''}</p>
         </div>
         <div class="sum">
-          <div class="sumh">How your fee was calculated</div>
+          <div class="sumh">How the fee was calculated</div>
           <div class="sumrow"><span>What the fund was worth on 1 January</span><span>${eur(startAt)}</span></div>
           <div class="sumrow"><span>What it was worth on 31 December</span><span>${eur(d.end)}</span></div>
           <div class="sumrow rule"><span>Average over the year \u2014 what you charge on</span>
@@ -1083,7 +1088,7 @@ SCREENS.performance = {
         </details>` : ''}
         <div class="decomp" style="margin-top:14px">
           <div class="row tot"><span>Fees earned so far</span><span class="amt">${eur(total)}</span></div>
-        </div>`}
+        </div>`}`}
       ${esgNow === null ? '' : `<div class="note info">
         <b>The fund\u2019s ESG score is ${esgNow.toFixed(0)} out of 100.</b>
         ${t === 0

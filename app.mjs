@@ -1,15 +1,15 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 18:00 UTC
+// Peak ESG — the client   ·   published 2026-11-04 18:42 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11041800';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041800';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041800';
-import { NEWS, newsFor } from './data/news.mjs?v=11041800';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041800';
-import { makeNet } from './net.mjs?v=11041800';
+import * as M from './model/model.mjs?v=11041842';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11041842';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11041842';
+import { NEWS, newsFor } from './data/news.mjs?v=11041842';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11041842';
+import { makeNet } from './net.mjs?v=11041842';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -24,6 +24,7 @@ const S = {
   resolvedYear:null,           // the last year this fund actually ran
   yearStart:null,              // the portfolio as the year opened, for the budgets
   policySnapshot:null,         // the policy before an unconfirmed switch
+  policyTextSnapshot:null,     // and its wording, which the switch also rewrites
   readyYear:null,              // the year this fund has said it is done deciding
   policy:{ strategy:null, excluded:[], rank:5, minScore:50 },
   policyText:'', fee:M.FEE_START,
@@ -57,6 +58,7 @@ const save = () => { try{ localStorage.setItem(KEY, JSON.stringify({
   // stamps are what stop a score being applied twice.
   joinedAt:S.joinedAt, switches:S.switches, switching:S.switching,
   yearStart:S.yearStart, policySnapshot:S.policySnapshot,
+  policyTextSnapshot:S.policyTextSnapshot,
   aiCrisisYear:S.aiCrisisYear, aiPitchStamp:S.aiPitchStamp,
   adds:S.adds, drops:S.drops })); }catch(e){} };
 const load = () => { try{ return JSON.parse(localStorage.getItem(KEY)) || null; }catch(e){ return null; } };
@@ -328,9 +330,15 @@ const go = s => { S.screen = s; save(); paint(); };
 // her new policy without the one-off withdrawal or the lasting trust penalty —
 // a free change — and there was no way to back out once started.
 function abandonSwitch(){
-  if (S.policySnapshot) S.policy = JSON.parse(JSON.stringify(S.policySnapshot));
-  S.policySnapshot = null; S.switching = false;
+  restoreSwitch();
   go('decide');
+}
+// The threshold screen rewrites the statement as well as the rules, and the
+// statement is what the assessor scores, so both come back together.
+function restoreSwitch(){
+  if (S.policySnapshot) S.policy = JSON.parse(JSON.stringify(S.policySnapshot));
+  if (S.policyTextSnapshot != null) S.policyText = S.policyTextSnapshot;
+  S.policySnapshot = null; S.policyTextSnapshot = null; S.switching = false;
 }
 
 // =============================================================================
@@ -752,7 +760,7 @@ SCREENS.threshold = {
       // Changing the policy mid-game. Charged by the model in the year it
       // happened, then cleared. The new wording is assessed afresh, which is
       // why the worker keys the assessment on the text and not on the fund.
-      S.switching = false; S.policySnapshot = null;
+      S.switching = false; S.policySnapshot = null; S.policyTextSnapshot = null;
       S.switches = (S.switches || 0) + 1;
       S.fund.switchPending = true;
       S.fund.switches = S.switches;
@@ -1346,6 +1354,7 @@ SCREENS.switch = {
     m.querySelector('#yes').onclick = () => {
       S.switching = true;               // the policy screens return here, not to the fee
       S.policySnapshot = JSON.parse(JSON.stringify(S.policy));
+      S.policyTextSnapshot = S.policyText || '';
       go('strategy');
     };
   }
@@ -1426,8 +1435,7 @@ function resolveYear(){
   // through choosing a new policy when the instructor ran the year; she keeps
   // the one investors actually bought until she confirms and pays for it.
   if (S.switching && S.policySnapshot) {
-    S.policy = JSON.parse(JSON.stringify(S.policySnapshot));
-    S.policySnapshot = null; S.switching = false;
+    restoreSwitch();
     botSay('Head of Distribution',
       `${Hey()}the year ran before you confirmed the new policy, so we are still selling the old one.`);
   }
@@ -1685,9 +1693,16 @@ function publishMe(){
     yearFees: S.lastResult ? S.lastResult.feeTake : null });
   save();
 }
-function advance(){            // testing only; the instructor does this for real
+// Offline only; in a real session the instructor runs the year. The last of
+// the dead 'play' stages from the three-beat rename: this one moved nobody,
+// because no client has tested for 'play' since.
+function advance(){
   const s = S.net.session();
-  S.net.setSession({ year: Math.min(5,(s.year||0)+1), stage:'play' });
+  const y = Math.min(YEARS.length - 1, (s.year || 0) + 1);
+  // Walk the same three beats the room does, so the offline path exercises
+  // the real routing rather than a shortcut around it.
+  S.net.setSession({ year: y, stage: 'decide' });
+  setTimeout(() => S.net.setSession({ year: y, stage: 'running' }), 60);
 }
 
 // ------------------------------------------------------------------- boot ---

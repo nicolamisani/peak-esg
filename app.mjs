@@ -322,7 +322,7 @@ function render(){
     if (DOM.botCount !== null && n > DOM.botCount) {
       const bar = document.getElementById('bot');
       if (bar) { bar.classList.add('flash');
-                 setTimeout(() => bar.classList.remove('flash'), 10200); }
+                 setTimeout(() => bar.classList.remove('flash'), 2800); }
     }
     DOM.botCount = n;
     const b = document.getElementById('bot');

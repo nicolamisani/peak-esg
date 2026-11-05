@@ -1,16 +1,16 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-05 12:52 UTC
+// Peak ESG — the client   ·   published 2026-11-05 13:06 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11051252';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11051252';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11051252';
-import { NEWS, newsFor } from './data/news.mjs?v=11051252';
-import { EPS, dossierAt } from './data/evolve.mjs?v=11051252';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11051252';
-import { makeNet } from './net.mjs?v=11051252';
+import * as M from './model/model.mjs?v=11051306';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11051306';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11051306';
+import { NEWS, newsFor } from './data/news.mjs?v=11051306';
+import { EPS, dossierAt } from './data/evolve.mjs?v=11051306';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11051306';
+import { makeNet } from './net.mjs?v=11051306';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -305,7 +305,11 @@ function render(){
     DOM.rail = railHtml;
   }
 
-  if (main.className !== mainCls) main.className = mainCls;
+  // A committed year is inert, and has to look inert rather than broken.
+  // Set here rather than in wire(): render owns className and used to wipe it.
+  const locked = S.screen === 'decide' && S.readyYear === S.year;
+  const cls = mainCls + (locked ? ' locked' : '');
+  if (main.className !== cls) main.className = cls;
   const screenChanged = S.screen !== DOM.screen;
   const bodyChanged = bodyHtml !== DOM.body;
   if (bodyChanged) { main.innerHTML = bodyHtml; DOM.body = bodyHtml; }
@@ -327,7 +331,7 @@ function render(){
     if (DOM.botCount !== null && n > DOM.botCount) {
       const bar = document.getElementById('bot');
       if (bar) { bar.classList.add('flash');
-                 setTimeout(() => bar.classList.remove('flash'), 2800); }
+                 setTimeout(() => bar.classList.remove('flash'), 10200); }
     }
     DOM.botCount = n;
     const b = document.getElementById('bot');
@@ -1112,7 +1116,10 @@ SCREENS.performance = {
     const t = S.reviewYear, y = YEARS[t], idx = idxRet(t);
     const last = t === YEARS.length - 1;   // 2027 skips the leaderboard
     const hold = fundHoldings();
-    const tr = S.teamResult || {};
+    // Only if it describes the year being shown. While a manager is held on
+    // the crisis screen the year has not resolved, and the previous year's
+    // figures used to appear under this year's heading.
+    const tr = (S.teamResult && S.teamResult.year === t) ? S.teamResult : {};
     // playYear keeps every year's decomposition on the fund, and the fund is
     // saved to the device. S.lastResult is not, so a reload used to leave the
     // manager looking at "waiting for your fund's numbers" for a year that had
@@ -1182,10 +1189,10 @@ SCREENS.performance = {
     const ins     = flows.filter(x => x[1] > 0).sort((a,b) => b[1]-a[1]);
     const outs    = flows.filter(x => x[1] < 0).sort((a,b) => a[1]-b[1]);
     return `<h1>${y}: how your fund did</h1>
-      <p class="task">What the year did to your money, and to every company in the universe.</p>
       ${r === null ? `<div class="note">Waiting for your fund\u2019s numbers.</div>` : `
         <div class="big ${r >= 0 ? 'up' : 'down'}">${pc(r)}</div>
-        <div class="small">your fund\u2019s return in ${y} \u2014 the market returned ${pc(idx)}</div>
+        <div class="lede" style="margin-top:2px">your fund\u2019s return in ${y}
+          \u2014 <b>the market returned ${pc(idx)}</b></div>
         ${!d ? `<div class="decomp" style="margin-top:16px">
           ${aum === null ? '' : `<div class="row"><span>The fund is now worth</span><span class="amt">${eur(aum)}</span></div>`}
           ${feeYear === null ? '' : `<div class="row"><span>Fees earned in ${y}</span><span class="amt">${eur(feeYear)}</span></div>`}
@@ -1555,7 +1562,7 @@ SCREENS.decide = {
     // stays on screen so they can see what they committed to, but nothing is
     // wired. This guard has to come before every other handler, which is why
     // the ready button is wired first.
-    if (S.readyYear === S.year) { m.classList.add('locked'); return; }
+    if (S.readyYear === S.year) return;      // locked: render() dims it
     const r = m.querySelector('#r');
     r.oninput = () => { S.fee = +r.value / 10000; paint(); const x = $('#r'); if (x) x.focus(); };
     const sw = m.querySelector('#switch');
@@ -1601,17 +1608,14 @@ SCREENS.switch = {
       <p class="lede">You promised <b>${esc(STRAT_NAME[S.policy.strategy]||'something')}</b>.
         Changing it now costs you <b>${(M.SWITCH_CUT*100).toFixed(0)}%</b> of the fund,
         immediately — those investors bought the old promise.</p>
-      <div class="note warn"><b>There is a lasting cost as well.</b> Investors who care most
-        about sustainability trust a manager who changes their mind less, every year from
-        now on, and the effect doubles if you change twice.</div>
+      <div class="note warn"><b>There is a lasting cost as well.</b> Investors who care
+        about sustainability trust a manager who changes her mind less. That lasts for the
+        rest of the game, and doubles if you change twice.</div>
       <div class="note good"><b>And there can be a gain.</b> A different policy admits
-        different companies. If the one you wrote is keeping the fund out of the companies
-        that are actually performing, changing it can earn back more than it costs — most of
-        all in the early years, when there is time left to recover. A policy written before
-        you knew anything about the market is not a promise you are obliged to keep.</div>
-      <p class="task">You will choose the strategy again, set how strict it is, and write
-        the policy again — investors have to be told what the strategy now is.
-        <b>The decision is yours.</b></p>
+        different companies. If yours is keeping the fund out of the ones that are
+        performing, the change can earn back more than it costs. That is truest in the early
+        years, when there is time to recover. A policy written before you had seen the
+        market is not a promise you are obliged to keep.</div>
       <div class="actions">
         <button class="ghost" id="no">Keep the current policy</button>
         <button id="yes">Change it</button></div>`;

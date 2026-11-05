@@ -1,16 +1,16 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-05 12:07 UTC
+// Peak ESG — the client   ·   published 2026-11-05 12:52 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11051207';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11051207';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11051207';
-import { NEWS, newsFor } from './data/news.mjs?v=11051207';
-import { EPS, dossierAt } from './data/evolve.mjs?v=11051207';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11051207';
-import { makeNet } from './net.mjs?v=11051207';
+import * as M from './model/model.mjs?v=11051252';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11051252';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11051252';
+import { NEWS, newsFor } from './data/news.mjs?v=11051252';
+import { EPS, dossierAt } from './data/evolve.mjs?v=11051252';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11051252';
+import { makeNet } from './net.mjs?v=11051252';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -277,6 +277,11 @@ function teamSheet(){
 const DOM = { rail:null, body:null, strip:null, screen:null, bot:null, botCount:null };
 
 function render(){
+  // Safari does not fire focusout when a focused field is removed by a
+  // re-render, so the class stuck and the COO bar stayed hidden for the rest
+  // of the session. Read what is actually focused instead of trusting events.
+  document.body.classList.toggle('typing',
+    ['INPUT', 'TEXTAREA'].includes((document.activeElement || {}).tagName));
   const scr = SCREENS[S.screen] || SCREENS.join;
   S.aside = null;                    // an aside belongs to one screen only
   const bodyHtml  = scr.html();      // building the screen is what sets it
@@ -2078,9 +2083,9 @@ document.addEventListener('focusin', e => {
     try { e.target.scrollIntoView({ block:'center', behavior:'smooth' }); } catch (_) {}
   }, 320);
 });
-document.addEventListener('focusout', e => {
-  if (typing(e)) document.body.classList.remove('typing');
-});
+// No focusout listener: Safari does not reliably fire it when the field is
+// removed, and render() now settles the class from the live focus anyway.
+document.addEventListener('focusout', () => paint());
 
 window.__peakBooted = true;              // the boot guard in index.html watches this
 window.PEAK = { S, M, go, advance, publishMe, SCREENS };  // for testing from the console

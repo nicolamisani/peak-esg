@@ -1,16 +1,16 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-04 21:36 UTC
+// Peak ESG — the client   ·   published 2026-11-05 10:38 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11042136';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11042136';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11042136';
-import { NEWS, newsFor } from './data/news.mjs?v=11042136';
-import { EPS, dossierAt } from './data/evolve.mjs?v=11042136';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11042136';
-import { makeNet } from './net.mjs?v=11042136';
+import * as M from './model/model.mjs?v=11051038';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11051038';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11051038';
+import { NEWS, newsFor } from './data/news.mjs?v=11051038';
+import { EPS, dossierAt } from './data/evolve.mjs?v=11051038';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11051038';
+import { makeNet } from './net.mjs?v=11051038';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -322,7 +322,7 @@ function render(){
     if (DOM.botCount !== null && n > DOM.botCount) {
       const bar = document.getElementById('bot');
       if (bar) { bar.classList.add('flash');
-                 setTimeout(() => bar.classList.remove('flash'), 2800); }
+                 setTimeout(() => bar.classList.remove('flash'), 10200); }
     }
     DOM.botCount = n;
     const b = document.getElementById('bot');

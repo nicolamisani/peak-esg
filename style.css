@@ -317,17 +317,21 @@ details.ex blockquote{margin:10px 0;padding:12px 15px;background:#fff;
 body.typing .botstrip{display:none}
 body.typing main{padding-bottom:20px}
 
-/* A new message from the COO flashes for a few seconds. Three pulses, then it
-   settles: enough to catch an eye that is somewhere else on the screen,
-   short enough not to become wallpaper. */
+/* A new message from the COO flashes for ten seconds. Five slow pulses rather
+   than a flicker: on a phone the bar is the bottom 59px of the screen and the
+   eye is somewhere else entirely, so this has to be a movement you catch in
+   peripheral vision. The tint was #EAF4EE, 8% off white, which was correct
+   and invisible; it is now a green you can actually see. */
 @keyframes botflash{
-  0%, 22%, 44%  {background:var(--green-pale); border-top-color:var(--green)}
-  11%, 33%, 100%{background:var(--paper);      border-top-color:var(--rule)}
+  0%, 100% {background:var(--paper); border-top-color:var(--rule)}
+  50%      {background:#C8E6D5;      border-top-color:var(--green)}
 }
-.botstrip.flash{animation:botflash 2.6s ease-in-out 1; border-top-width:2px}
+.botstrip.flash{animation:botflash 2s ease-in-out 5; border-top-width:3px}
 .botstrip.flash .who{color:var(--green)}
+/* No animation, so the signal has to be carried by holding the colour. */
 @media (prefers-reduced-motion:reduce){
-  .botstrip.flash{animation:none;background:var(--green-pale);border-top-color:var(--green)}
+  .botstrip.flash{animation:none;background:#C8E6D5;border-top-color:var(--green)}
+}
 }
 
 /* The course line, as Greenmarket carries it. Title screen and the ending

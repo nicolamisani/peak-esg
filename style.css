@@ -334,3 +334,12 @@ body.typing main{padding-bottom:20px}
    only: in between, a student is playing, not reading a title page. */
 .coursefoot{text-align:center;color:var(--soft);font-size:12.5px;
   padding:18px 0 10px;margin:22px 0 0;border-top:1px solid var(--rule)}
+
+/* A year that has been committed. Everything stays readable - the team must be
+   able to see what they locked in - but nothing responds, so it has to look
+   that way rather than appearing broken. */
+.locked input[type=range],
+.locked .co,
+.locked [data-w],
+.locked #switch{opacity:.55;pointer-events:none;filter:grayscale(.4)}
+.locked .co{cursor:default}

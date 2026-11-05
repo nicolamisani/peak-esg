@@ -20,9 +20,9 @@ export const MAX_ANALYSTS = SEATS.length;
 
 export const ROLES = {
   manager: { name:'Create the fund',
-             blurb:'You run it. You decide the policy, the price and the portfolio — and you will be told nothing about the companies. Your analysts hold all of it.' },
+             blurb:'You set the ESG strategy, the price and the portfolio. You see no company information; your analysts hold it.' },
   analyst: { name:'Join a fund as an analyst',
-             blurb:'Four companies become yours to research. Nobody else sees what you see, and the manager cannot see any company at all.' }
+             blurb:'Four companies are yours to research. The manager sees none of them, so you have to explain what you find.' }
 };
 
 // With fewer than three analysts the manager still researches nothing and the

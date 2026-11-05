@@ -13,4 +13,4 @@ the project, and access is governed by the Firestore rules.
 - `?net=local` — offline mode, one browser only, for a solo run-through.
 - `?fresh` — forget the game saved on this device.
 
-Last published 2026-11-05 10:38 UTC.
+Last published 2026-11-05 12:07 UTC.

@@ -1,16 +1,16 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-05 10:38 UTC
+// Peak ESG — the client   ·   published 2026-11-05 12:07 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11051038';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11051038';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11051038';
-import { NEWS, newsFor } from './data/news.mjs?v=11051038';
-import { EPS, dossierAt } from './data/evolve.mjs?v=11051038';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11051038';
-import { makeNet } from './net.mjs?v=11051038';
+import * as M from './model/model.mjs?v=11051207';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11051207';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11051207';
+import { NEWS, newsFor } from './data/news.mjs?v=11051207';
+import { EPS, dossierAt } from './data/evolve.mjs?v=11051207';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11051207';
+import { makeNet } from './net.mjs?v=11051207';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -186,8 +186,8 @@ function stepLabel(){
   const m = { join:'joining', brief:'the brief', strategy:'step 1 of 3 · strategy',
     threshold:'step 2 of 3 · policy', fee:'step 3 of 3 · price',
     wait:'waiting', desk:'your desk',
-    dossier:'your desk', allocate:'the portfolio', open:'open for business',
-    team:'which fund?', seat:'taking a seat', teamfinal:'the result', final:'the result',
+    dossier:'your desk', allocate:'the portfolio',
+    team:'which fund?', seat:'taking a seat', final:'the result',
     switch:'changing the policy', review:'the year in review', decide:'your move',
     podium:'the podium',
     performance:'how your fund did',
@@ -413,15 +413,15 @@ const HOWTO = [
   ['Your job is to make the fees of the fund as large as possible',
    'A management fee is a percentage of the money you look after, charged every year. Your score is the six-year total, not the returns. Size matters as much as selection, and the fund grows only if investors want what you are selling.'],
   ['Four of you to a fund',
-   'One of you creates the fund and runs it. The other three are analysts, with four companies each to research. <b>The manager sees no company information at all.</b> The analysts read it and brief the manager.'],
+   'One of you creates the fund and runs it. The other three are analysts, with four companies each to research. <b>The manager sees no company information.</b> The analysts read it and brief the manager.'],
   ['The manager has to ask, and the analysts have to explain',
    'The manager decides. Nothing reaches the manager except by talking.'],
-  ['The manager decides what the fund stands for, and how strictly',
+  ['The manager sets the ESG strategy, and how strict it is',
    'Three ways: exclude activities, require companies to rank near the top of their industry, or set a minimum ESG score. A strict policy keeps you out of some good investments. A loose one is hard to defend to investors.'],
   ['Your policy will be assessed by investors',
    'The manager writes it in plain words before seeing any company. A clear promise brings money in. Promising more than the portfolio delivers costs money when investors notice, and makes any later scandal worse.'],
   ['Six years, one at a time',
-   'Each year brings news, returns, and money flowing in or out. Between years you can change the fee, trade a little, and even change what the fund stands for. Investors who bought the old promise will leave.'],
+   'Each year brings news, returns, and money flowing in or out. Between years you can change the fee, trade a little, and even change the ESG strategy. Investors who bought the old promise will leave.'],
   ['Past performance is not a guide to what happens next',
    'Every dossier shows three years of share price history, 2019 to 2021. It is accurate, and it is the first thing most analysts will quote you.'],
 ];
@@ -509,10 +509,10 @@ SCREENS.brief = {
   html(){
     if (isMgr()) return `
       <h1>You run the fund</h1>
-      <p class="lede">Three decisions before you open: what the fund stands for, how strict
-        that is — written down, in your own words — and what you charge.</p>
+      <p class="lede">Three decisions before you open: the ESG strategy, how strict it is
+        — written down, in your own words — and what you charge.</p>
       <div class="note info"><b>You will not see the companies.</b> Your analysts have the dossiers. You cannot build the portfolio without asking them.</div>
-      <p class="task">Next: choose what the fund stands for.</p>
+      <p class="task">Next: choose the ESG strategy.</p>
       <div class="actions"><button id="n" class="wide">Begin</button></div>`;
     const n = myDesk().length;
     return `
@@ -520,7 +520,7 @@ SCREENS.brief = {
       <p class="lede">${n} companies are yours to research${
         S.desk && n === 4 ? ` — the ${DESKS[S.desk].name.toLowerCase()}` : ''}.
         They are candidates for the fund, and nobody else in the group can see them.
-        <b>The manager cannot see any company at all.</b></p>
+        <b>The manager cannot see any company.</b></p>
       <p class="task">Open each dossier and read it. Seven sections, from what the company
         does to what the NGOs say about it.</p>
       <div class="note info"><b>You can recommend a company to the manager.</b> That puts
@@ -705,7 +705,7 @@ SCREENS.dossier = {
         (items.length ? items.slice().reverse().map(n=>`<div class="kv" style="display:block">
           <div class="k" style="font-family:var(--mono);font-size:12px">${n.y}</div>
           <div><b>${esc(n.t)}</b> — ${esc(n.s)}</div></div>`).join('')
-        : '<p class="small">Nothing yet. The game has not started.</p>');
+        : '<p class="small">Nothing yet. Trading opens in 2022.</p>');
     }
     return `<h1>${esc(c.name)}</h1>
       <p class="lede">${esc(c.blurb)}</p>
@@ -753,7 +753,7 @@ const POLICY_EXAMPLE = `<details class="ex"><summary>What one of these looks lik
 </details>`;
 
 SCREENS.strategy = {
-  html(){ return `<h1>What does the fund stand for?</h1>
+  html(){ return `<h1>What is the fund’s ESG strategy?</h1>
     <p class="task">Choose one. You set how strict it is on the next screen.</p>
     <div class="choices">${M.STRATEGIES.map(s=>`<div class="choice${S.policy.strategy===s.id?' sel':''}" data-s="${s.id}">
       <div class="lbl">${esc(s.name)}</div><div class="desc">${esc(s.blurb)}</div></div>`).join('')}</div>
@@ -801,7 +801,7 @@ SCREENS.threshold = {
         would rule out.</p>
       <p class="small">Then write it: two or three sentences, in your own words, saying
         what the fund will and will not own, <b>and why an investor should buy it</b>.
-        This is what investors are told the fund stands for, and everything you buy is
+        This is the strategy investors are told the fund follows, and everything you buy is
         checked against it. You write it <b>before</b> you have seen a single company.</p>
       <textarea id="pol" placeholder="This fund will not invest in…">${esc(S.policyText)}</textarea>
       ${POLICY_EXAMPLE}
@@ -838,7 +838,7 @@ SCREENS.threshold = {
       S.fund.switches = S.switches;
       S.fund.policy = S.policy;
       botSay('Chief Operating Officer',
-        `<b>${Hey()}it is done.</b> Investors have been told the fund now stands for `
+        `<b>${Hey()}it is done.</b> Investors have been told the strategy is now `
         + `<b>${esc(STRAT_NAME[S.policy.strategy]||'something else')}</b>. `
         + `About <b>${(M.SWITCH_CUT*100).toFixed(0)}%</b> of the money will leave this year.`);
       publishMe(); go('decide');
@@ -853,7 +853,7 @@ SCREENS.fee = {
               : f>0.0060?'About the going rate.'
               : 'Cheap. More investors will buy, and you earn less from each of them.';
     return `<h1>What do you charge?</h1>
-      <p class="task">The fee is the percentage investors pay you each year for managing
+      <p class="lede">The fee is the percentage investors pay you each year for managing
         their money, and <b>the total over the six years is your result</b>. Charge more and
         you earn more per euro, but a dear fund has to be worth it. Other funds are opening
         at about 0.80%.</p>
@@ -897,7 +897,7 @@ SCREENS.allocate = {
         ${breach.map(b=>`${esc(b.name)} <span class="small">(${esc(b.why)})</span>`).join(', ')}.
         You are allowed to own ${breach.length===1?'it':'them'}. Investors will notice the
         difference between what you promised and what you bought.</div>`:''}
-      <div class="actions"><button id="n" class="wide" ${n>=M.MIN_HOLDINGS?'':'disabled'}>Done — open for business</button></div>`;
+      <div class="actions"><button id="n" class="wide" ${n>=M.MIN_HOLDINGS?'':'disabled'}>Done</button></div>`;
   },
   wire(m){
     m.querySelectorAll('[data-w]').forEach(b=>b.onclick=e=>{ e.stopPropagation();
@@ -946,10 +946,8 @@ SCREENS.open = {
         : `<div class="note good">Every holding is inside the policy you wrote.</div>`}
       ${S.aiNote ? '' : `<div class="note">Your Chief Operating Officer is reading your policy
         statement now. Watch the bar at the bottom.</div>`}
-      <div class="waitbox"><b>You are done for 2022</b>
-        <div class="small" style="margin-top:4px">The front of the room can see that your fund is
-          built. 2022 runs once every fund is ready. Nothing happens to your money until then, and
-          you can still change anything above by going back.</div></div>`;
+      <div class="waitbox"><b>Your fund is ready</b>
+        <div class="small" style="margin-top:4px">Wait, the year will start soon.</div></div>`;
   },
   wire(){ const st = S.net ? S.net.session() : null;
     // A manager who finishes setting up after the first year has already been
@@ -974,7 +972,7 @@ SCREENS.review = {
     // Not escaped: the reviews are authored here and carry <b> on the figures
     // that matter, because a wall of plain prose is a wall nobody reads.
     return `<h1>${y} in review</h1>
-      <p class="task">${r.strap || ''}</p>
+      <p class="lede">${r.strap || ''}</p>
       <div class="sect review">${(r.body||[]).map(x=>`<p>${x}</p>`).join('')}</div>
       <div class="small" style="margin-top:12px">Peak Research · global equity strategy</div>
       <div class="actions"><button id="n" class="wide">${esc(on)}</button></div>`; },
@@ -1010,7 +1008,14 @@ SCREENS.running = {
     // the same year. Her analysts keep watching the animation.
     if (isMgr() && S.fund && S.resolvedYear !== S.year) {
       const hit = severeHit();
-      if (hit && S.crisisYear !== YEARS[S.year]) { S.crisis = hit; setTimeout(()=>go('crisis'), 900); return; }
+      if (hit && S.crisisYear !== YEARS[S.year]) {
+        // A new scandal starts on a blank page. The draft used to survive from
+        // the previous one, so the second crisis opened pre-filled with the
+        // answer to the first - and a manager who did not notice would submit
+        // last year's words about a different company, be marked evasive for
+        // it, and have the wrong text written into her marking record.
+        S.crisis = hit; S.crisisText = '';
+        setTimeout(()=>go('crisis'), 900); return; }
       try { resolveYear(); } catch (err) { console.error('Peak ESG \u2014 year failed to resolve', err); }
     }
     const sub = m.querySelector('#runsub');
@@ -1073,7 +1078,7 @@ const FLOW_WORDS = {
   concentration:['',                                       'holding too few companies'],
   pitch:        ['your policy',                            'your policy'],
   switched:     ['',                                       'investors who had bought the old strategy'],
-  trust:        ['',                                       'changing your mind about what the fund stands for']
+  trust:        ['',                                       'changing your mind about the ESG strategy']
 };
 // How strict the screen is and how well it was written are separate terms in
 // the model, and they are shown as one line: both are "your policy" to the
@@ -1100,6 +1105,7 @@ function flowRows(d, retTxt){
 SCREENS.performance = {
   html(){
     const t = S.reviewYear, y = YEARS[t], idx = idxRet(t);
+    const last = t === YEARS.length - 1;   // 2027 skips the leaderboard
     const hold = fundHoldings();
     const tr = S.teamResult || {};
     // playYear keeps every year's decomposition on the fund, and the fund is
@@ -1107,7 +1113,13 @@ SCREENS.performance = {
     // manager looking at "waiting for your fund's numbers" for a year that had
     // already run. Read the history, fall back to the live one.
     const hist = (S.fund && S.fund.years) || [];
-    const d  = isMgr() ? (hist[t] || (S.lastResult && S.lastResult.year === y ? S.lastResult : null)) : null;
+    // Analysts get the breakdown too. The asymmetry this game is built on is
+    // about who has read the dossiers, not about the fund's own accounts -
+    // they already see the return, the fees, the AUM and the leaderboard, and
+    // the decomposition is where "the policy earned 30, the gap gave 14 back"
+    // becomes visible. Three quarters of the room could not see it.
+    const d  = isMgr() ? (hist[t] || (S.lastResult && S.lastResult.year === y ? S.lastResult : null))
+                       : (tr.flows ? { flows: tr.flows, end: tr.aum, start: null } : null);
     const r  = isMgr() ? (d ? d.ret : null) : (tr.ret == null ? null : tr.ret);
     const feeYear = isMgr() ? (d ? d.feeTake : null) : (tr.yearFees == null ? null : tr.yearFees);
     const total = isMgr() ? (S.fund ? S.fund.feesEarned : 0) : (tr.fees || 0);
@@ -1144,7 +1156,7 @@ SCREENS.performance = {
       ['New money, market trend', d.flows.base],
       ['Performance against the market', d.flows.performance],
       ['The portfolio\u2019s ESG score', d.flows.esg],
-      ['What the fund stands for', d.flows.policy],
+      ['The ESG strategy', d.flows.policy],
       ['Your fee against your rivals', d.flows.fee],
       ['Scandals in the portfolio', d.flows.scandal],
       ['The gap between words and holdings', d.flows.greenwashing],
@@ -1212,7 +1224,7 @@ SCREENS.performance = {
         <b>The fund\u2019s ESG score is ${esgNow.toFixed(0)} out of 100.</b>
         ${t === 0
           ? 'The rating team re-scores every company at the end of each year, so from next'
-            + ' year this number will move on its own, without you trading at all.'
+            + ' year this number will move on its own, even if you never trade.'
           : (esgMove === 0
               ? 'It is unchanged: the re-scoring of your companies cancelled out this year.'
               : `It is ${esgMove > 0 ? 'up' : 'down'} ${Math.abs(esgMove)} from ${esgWas.toFixed(0)},`
@@ -1224,11 +1236,19 @@ SCREENS.performance = {
       <p class="small">This is what the policy and the portfolio cost the fund, or saved it.</p>
       ${colhead(y)}${rest.map(line).join('')}
       <div class="note">${isMgr()
-        ? 'Ask your analysts what changed on their desks this year. The news reaches them, not you.'
-        : 'Go back through your companies before the manager decides. The scores have moved and there is new press. Whatever you do not say out loud does not reach them.'}</div>
-      <div class="actions"><button id="n" class="wide">Leaderboard</button></div>`;
+        ? 'This year\u2019s news reached their desks. Ask them what changed.'
+        : 'Go back through your companies before the manager decides. The scores have moved and there is new press. She only knows what you tell her.'}</div>
+      <div class="actions"><button id="n" class="wide">${
+        last ? (S.reviewTo ? 'See the final result' : 'Done') : 'Leaderboard'}</button></div>`;
   },
-  wire(m){ m.querySelector('#n').onclick = () => go('standings'); }
+  // After the last year the leaderboard is skipped entirely: it used to show
+  // the finished ranking before the podium had announced a thing, and then
+  // again on the way to the ending. In 2027 this screen takes over what
+  // standings did on the way out.
+  wire(m){ m.querySelector('#n').onclick = () => {
+    if (S.reviewYear !== YEARS.length - 1) { go('standings'); return; }
+    if (S.reviewTo) { const t = S.reviewTo; S.reviewTo = null; go(t); return; }
+    go(isMgr() ? 'wait' : 'standby'); }; }
 };
 
 // --------------------------------------------------------- the whole run ---
@@ -1248,6 +1268,10 @@ function runHistory(){
 }
 const round2 = x => x == null ? null : Math.round(x * 100) / 100;
 function runSummary(){
+  // An analyst has no fund object. The manager publishes hers and the worker
+  // relays it, so the whole team reads one ending built from one set of
+  // numbers rather than two screens that could disagree.
+  if (!isMgr()) return (S.teamResult && S.teamResult.summary) || null;
   const h = runHistory();
   const r = S.roster || {};
   const log = S.crisisLog || [];
@@ -1348,41 +1372,6 @@ function downloadCSV(){
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
 }
 
-function downloadAnalystCSV(){
-  const r = S.teamResult || {}, ro = S.roster || {};
-  const cell = v => { const t = noFormula(v);
-    return /[",\n]/.test(t) ? '"' + t.replace(/"/g,'""') + '"' : t; };
-  const row = (...c) => c.map(cell).join(',');
-  const mine = myDesk().map(id => ({ c: co(id), w: (r.holdings||{})[id] || 0, f: !!S.flags[id] }));
-  const out = [
-    row('Peak ESG'),
-    row('30296 Global Sustainability Strategy \u00b7 Bocconi University'),
-    '',
-    row('Fund', r.name || S.fundName || ''),
-    row('Analyst', S.who || ''),
-    row('Desk', (DESKS[S.desk] || {}).name || ''),
-    row('Fund manager', typeof ro.manager === 'string' ? ro.manager : ''),
-    row('Other analysts', (ro.team || []).map(a => a.who).filter(w => w && w !== S.who).join(' / ')),
-    '',
-    row('FUND RESULT'),
-    row('Total fees earned (EUR m)', (r.fees || 0).toFixed(2)),
-    row('Place', r.rank ? `${r.rank} of ${r.of}` : ''),
-    row('Portfolio ESG score', r.esg == null ? '' : Math.round(r.esg)),
-    row('ESG place', r.esgRank ? `${r.esgRank} of ${r.of}` : ''),
-    '',
-    row('MY FOUR COMPANIES'),
-    row('Company', 'Industry', 'I recommended it', 'The fund held it'),
-    ...mine.map(x => row(x.c.name, x.c.industry, x.f ? 'yes' : 'no',
-                         x.w ? `yes, ${x.w}x` : 'no')),
-  ];
-  const blob = new Blob(['\uFEFF' + out.join('\r\n')], { type:'text/csv;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = ((r.name || 'peak-esg') + '-' + (S.who || 'analyst'))
-                 .replace(/[^\w]+/g,'-').toLowerCase() + '.csv';
-  document.body.appendChild(a); a.click();
-  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
-}
 
 // ----------------------------------------------------------- the podium ----
 // Third, then second, then first, then everyone: the instructor walks it from
@@ -1405,10 +1394,10 @@ SCREENS.podium = {
     const step = S.podiumStep || 0;
     const board = (S.board || []).slice().sort((a, b) => (b.fees || 0) - (a.fees || 0));
     const at = n => board[n - 1];
-    return `<h1>${step === 0 ? 'The results are in' : step < 4 ? 'The podium' : 'The leaderboard'}</h1>
+    return `<h1>${step === 0 ? 'The results are in' : step < 4 ? 'The podium' : 'The final leaderboard'}</h1>
       <p class="task">${step === 0
-        ? 'Watch the front of the room. The places are read out one at a time.'
-        : `${board.length} fund${board.length === 1 ? '' : 's'}, six years, the same twelve companies. Ranked on the fees each one earned.`}</p>
+        ? 'The places are read out one at a time.'
+        : ''}</p>
       <div class="podiumwrap">
         ${plinth(at(2), 2, step)}${plinth(at(1), 1, step)}${plinth(at(3), 3, step)}
       </div>
@@ -1455,7 +1444,7 @@ SCREENS.news = {             // analyst: what happened to my four
 SCREENS.standby = {          // analyst: between decisions
   html(){ const y=YEARS[S.year];
     return `<h1>Tell the manager</h1>
-      <p class="task">The manager has no company information at all. Tell them what matters
+      <p class="task">The manager has no company information. Tell them what matters
         most about your four, and why.</p>
       ${myDesk().map(id=>{ const c=co(id); const f=S.flags[id];
         return `<div class="co${f?' held':''}" data-id="${id}">
@@ -1500,25 +1489,25 @@ SCREENS.decide = {
         read this year\u2019s news.</p>
 
       <h2>1 \u00b7 The fee</h2>
-      <p class="small">What investors pay you each year. Your rivals are charging about
-        <b>${pct(S.peerFee)}</b>.</p>
+      <p class="small">What investors pay you each year. <b>Your rivals are charging about
+        ${pct(S.peerFee)}.</b></p>
       <div class="big">${pct(S.fee)}</div>
       <input type="range" id="r" min="10" max="200" step="5" value="${Math.round(S.fee*10000)}">
 
-      ${S.year >= 5 ? '' : `<h2>2 \u00b7 What the fund stands for</h2>
+      ${S.year >= 5 ? '' : `<h2>2 \u00b7 The ESG strategy</h2>
       <div class="note warn"><span class="risky">\u26a0</span>
-        <b>${esc(STRAT_NAME[S.policy.strategy] || 'Your policy')}.</b>
+        <b>Currently: ${esc(STRAT_NAME[S.policy.strategy] || 'your policy')}.</b>
         ${S.switches ? `You have changed this ${S.switches === 1 ? 'once' : S.switches + ' times'} already. ` : ''}
-        Changing it is the one expensive move here: a fixed share of your investors leave
-        immediately, and the ones who care most about sustainability trust you less from
-        then on.
+        Changing it is the one expensive move here. Some investors leave at once, and the
+        ones who care most trust you less afterwards.
         <div class="actions" style="margin-top:10px">
-          <button class="ghost" id="switch">Change what the fund stands for</button></div>
+          <button class="ghost" id="switch">Change the ESG strategy</button></div>
       </div>`}
 
       <h2>${S.year >= 5 ? '2' : '3'} \u00b7 The companies</h2>
-      <p class="small">Tap a company to buy or drop it. Tap its weight to change how much of
-        it you hold. ${chip('to add', addsLeft, ADDS_YEAR)} ${chip('to drop', dropsLeft, DROPS_YEAR)}
+      <p class="small"><b>Each year you can add two companies and drop two. You can change
+        all weights freely.</b> Tap a company to buy or drop it. Tap its weight to change how
+        much of it you hold. ${chip('to add', addsLeft, ADDS_YEAR)} ${chip('to drop', dropsLeft, DROPS_YEAR)}
         <span class="budget">weights \u00b7 as many as you like</span></p>
       ${UNIVERSE.map(c => { const w = S.holdings[c.id];
         // Putting back something you started the year with is always allowed,
@@ -1544,25 +1533,28 @@ SCREENS.decide = {
         ${breach.length === 1 ? 'it' : 'them'}; investors will notice the difference between what
         you promised and what you own.</div>` : ''}
 
-      ${n >= M.MIN_HOLDINGS ? `<div class="actions">
-        <button id="ready" class="${said ? 'ghost' : 'wide'}">${said
-          ? 'Actually, we are still deciding'
-          : 'We are done \u2014 run the year when you like'}</button></div>` : ''}
+      ${n >= M.MIN_HOLDINGS && !said ? `<div class="actions">
+        <button id="ready" class="wide">We are done \u2014 this locks ${YEARS[S.year]}</button></div>` : ''}
       <div class="waitbox"><b>${said
-        ? `Told the front of the room you are ready for ${YEARS[S.year]}`
+        ? `${YEARS[S.year]} is locked`
         : `Waiting for ${YEARS[S.year]} to run`}</b>
         <div class="small" style="margin-top:4px">${said
-          ? 'You can still change anything until the year actually runs \u2014 just say so above.'
-          : 'Change what you like. Nothing here costs anything until the year runs.'}</div></div>`;
+          ? 'Wait, the year will start soon.'
+          : 'Everything here can still be changed until you press the button above.'}</div></div>`;
   },
   wire(m){
+    const rdy = m.querySelector('#ready');
+    if (rdy) rdy.onclick = () => { S.readyYear = S.year; publishMe(); paint(); };
+    // DONE IS DONE. Once a team has committed, the instructor must be able to
+    // trust the dot: nothing below can move until the year runs. Everything
+    // stays on screen so they can see what they committed to, but nothing is
+    // wired. This guard has to come before every other handler, which is why
+    // the ready button is wired first.
+    if (S.readyYear === S.year) { m.classList.add('locked'); return; }
     const r = m.querySelector('#r');
     r.oninput = () => { S.fee = +r.value / 10000; paint(); const x = $('#r'); if (x) x.focus(); };
     const sw = m.querySelector('#switch');
     if (sw) sw.onclick = () => go('switch');
-    const rdy = m.querySelector('#ready');
-    if (rdy) rdy.onclick = () => {
-      S.readyYear = S.readyYear === S.year ? null : S.year; publishMe(); paint(); };
     // Weights are free; adds and drops are not. A refusal says so out loud
     // rather than doing nothing, which is what made the screen look broken.
     m.querySelectorAll('[data-w]').forEach(b => b.onclick = e => { e.stopPropagation();
@@ -1600,7 +1592,7 @@ SCREENS.decide = {
 // million if you notice in the first year and nothing by the last.
 SCREENS.switch = {
   html(){
-    return `<h1>Change what the fund stands for</h1>
+    return `<h1>Change the ESG strategy</h1>
       <p class="lede">You promised <b>${esc(STRAT_NAME[S.policy.strategy]||'something')}</b>.
         Changing it now costs you <b>${(M.SWITCH_CUT*100).toFixed(0)}%</b> of the fund,
         immediately — those investors bought the old promise.</p>
@@ -1613,7 +1605,7 @@ SCREENS.switch = {
         all in the early years, when there is time left to recover. A policy written before
         you knew anything about the market is not a promise you are obliged to keep.</div>
       <p class="task">You will choose the strategy again, set how strict it is, and write
-        the policy again — investors have to be told what the fund now stands for.
+        the policy again — investors have to be told what the strategy now is.
         <b>The decision is yours.</b></p>
       <div class="actions">
         <button class="ghost" id="no">Keep the current policy</button>
@@ -1651,14 +1643,15 @@ SCREENS.crisis = {
     const { c, ev, weight } = S.crisis;
     const outside = !M.admits(S.policy, c);
     return `<h1>A scandal in your portfolio</h1>
-      <p class="task">${esc(c.name)} is ${(weight*100).toFixed(0)}% of the fund. Investors will
-        ask you about it today.</p>
+      <p class="lede"><b>${esc(c.name)} is ${(weight*100).toFixed(0)}% of the fund.</b>
+        Investors will ask you about it today.</p>
       <div class="note bad"><b>${esc(c.name)}, ${YEARS[S.year]}</b><div style="margin-top:4px">${esc(ev.note)}</div></div>
       ${outside?`<div class="note warn">This company was outside the policy you wrote, and you owned it anyway.</div>`:''}
       <h2>What do you say?</h2>
-      <p class="small">Two or three sentences. Investors will compare what you say with what
-        the fund actually owned. A credible answer halves the damage to the fund's reputation;
-        it cannot recover the money lost on the shares.</p>
+      <p class="lede"><b>Ask your analysts first: one of them has ${esc(c.name)} on their
+        desk and has read its file.</b> Then two or three sentences. Investors will compare what
+        you say with what the fund actually owned. A credible answer <b>halves the damage</b> to
+        the fund's reputation; it cannot recover the money lost on the shares.</p>
       <textarea id="t" placeholder="Our position in ${esc(c.name)}\u2026">${esc(S.crisisText||'')}</textarea>
       <div class="actions">
         <button id="n" class="wide">Issue the statement</button>
@@ -1756,37 +1749,22 @@ function resolveYear(){
 // Three quarters of the room used to get no ending at all: the manager played
 // through to the result and the analysts sat on "Tell her" until the laptop was
 // closed. This is their payoff, and the hook for the debrief.
-SCREENS.teamfinal = {
-  html(){
-    const r = S.teamResult;
-    if (!r) return `<h1>Six years on</h1>
-      <p class="lede">Waiting for your fund's result.</p>
-      <div class="note">It will appear here in a moment.</div>`;
-    const mine = myDesk().map(id => ({ c:co(id), w:(r.holdings||{})[id]||0, f:!!S.flags[id] }));
-    const held = mine.filter(x=>x.w);
-    return `<h1>${esc(r.name || 'Your fund')}</h1>
-      <div class="big">${eur(r.fees||0)}</div>
-      <div class="small">total fees earned${r.rank?` — ${ord(r.rank)} of ${r.of}`:''}</div>
-      <div class="note info"><b>Portfolio ESG score ${Math.round(r.esg||0)}.</b>
-        ${r.esgRank?`Your fund is ${ord(r.esgRank)} of ${r.of} on sustainability and ${ord(r.rank)} of ${r.of} on fees.`:''}</div>
-      <h2>Your four, and what the manager did with them</h2>
-      <div class="decomp">${mine.map(x=>`<div class="row">
-        <span>${esc(x.c.name)}${x.f?' <span class="small">· you recommended it</span>':''}</span>
-        <span class="amt">${x.w?`held ${x.w}×`:'not held'}</span></div>`).join('')}</div>
-      <div class="note">${
-        held.length===0 ? 'The manager held none of your four. Analysts are judged on what gets bought.'
-        : mine.some(x=>x.f && x.w) ? 'The manager bought something you had recommended. The credit for that is shared.'
-        : 'Nothing you recommended ended up in the book.'}</div>
-      <div class="actions" style="margin-top:22px">
-        <button id="csv" class="wide">Save my result as a file</button></div>
-      <p class="small" style="text-align:center">Your desk, what you recommended, and how the
-        fund finished, saved to this device.</p>`;
-  },
-  wire(m){ const b = m.querySelector('#csv');
-    if (b) b.onclick = () => { try { downloadAnalystCSV(); }
-      catch (e) { console.error('Peak ESG \u2014 could not write the file', e);
-                  b.textContent = 'Could not save the file'; } }; }
-};
+// An analyst's own contribution, kept as one line on the shared ending now
+// that the separate analyst screen is gone. The instructor's export records
+// who recommended what, so nothing is lost for marking - but a student who
+// pushed for a company that won should see it said back to them.
+function myRecommendations(){
+  if (isMgr()) return '';
+  const mine = myDesk().map(id => ({ c: co(id), f: !!S.flags[id] })).filter(x => x.f);
+  if (!mine.length) return '';
+  const held = (S.teamResult && S.teamResult.holdings) || {};
+  const kept = mine.filter(x => held[x.c.id]).length;
+  return `<div class="note">You recommended ${mine.map(x => esc(x.c.name)).join(' and ')}. `
+       + (kept === mine.length ? 'The fund held them.'
+        : kept ? `The fund held ${kept} of them.` : 'The fund held neither.')
+       + '</div>';
+}
+
 
 SCREENS.wait = {
   html(){
@@ -1799,21 +1777,23 @@ SCREENS.wait = {
     <p class="lede">Total fees so far: <b>${eur(S.fund?S.fund.feesEarned:0)}</b>.</p>
     <div class="waitbox"><b>Waiting for ${S.year >= 5 ? 'the final result' : next}</b>
       <div class="small" style="margin-top:4px">${S.year >= 5
-        ? 'The instructor will reveal every fund\u2019s result.'
-        : 'The instructor opens the next year from the front of the room.'}</div></div>
-    <p class="task">Use the time: ask your analysts what changed on their desks, and what
-      they are watching for next year.</p>
+        ? 'You will see the fund\u2019s results soon.'
+        : 'Use the time: ask your analysts what changed on their desks, and what they are watching for next year.'}</div></div>
     ${solo?`<div class="actions"><button class="ghost" id="adv">Advance (testing)</button></div>`:''}`; },
   wire(m){ const a=m.querySelector('#adv'); if(a) a.onclick=()=>advance(); }
 };
 
 SCREENS.final = {
   html(){
-    if (!S.fund) return `<h1>Six years on</h1>
+    const s0 = runSummary();
+    if (!isMgr() && !s0) return `<h1>Six years on</h1>
+      <p class="lede">Your fund\u2019s result is on its way.</p>
+      <div class="note">It will appear here in a moment.</div>`;
+    if (isMgr() && !S.fund) return `<h1>Six years on</h1>
       <p class="lede">This fund never opened, so there is nothing to report.</p>
       <div class="note">If that is wrong, your device may have lost its game. Nothing can be
-        recovered now \u2014 but your fund\u2019s result is on the screen at the front of the room.</div>`;
-    const s = runSummary();
+        recovered now \u2014 but your fund\u2019s result is safe on the server.</div>`;
+    const s = s0;
     const up = s.growth >= 0;
     const line = (k, v, cls) => `<div class="row"><span>${k}</span>
       <span class="amt${cls ? ' ' + cls : ''}">${v}</span></div>`;
@@ -1877,6 +1857,7 @@ SCREENS.final = {
       : `<div class="note">Your Chief Operating Officer is still writing. It will appear here,
           and it goes into the file.</div>`}
 
+      ${myRecommendations()}
       <div class="actions" style="margin-top:22px">
         <button id="csv" class="wide">Save our result as a file</button></div>
       <p class="small" style="text-align:center">A spreadsheet of everything above, including
@@ -1965,7 +1946,7 @@ function connect(){
     // can never drift onto different moments in time again.
     const RESULTS = ['review', 'performance', 'standings'];
     const BUSY = ['crisis', 'crisiswait'];   // mid-statement: do not move her
-    const ENDINGS = ['final', 'teamfinal'];
+    const ENDINGS = ['final'];
     const onEnding = RESULTS.includes(S.screen) && S.reviewTo;
     // Anyone still setting up is left where they are: the manager joins the
     // year when she opens the fund, a late analyst at the next year.
@@ -1981,9 +1962,11 @@ function connect(){
     } else if (st.stage === 'reveal' && !ENDINGS.includes(S.screen) && !onEnding
         && !BUSY.includes(S.screen) && S.screen !== 'join') {
       // The last year is the authored one, so its review comes first.
-      S.reviewYear = YEARS.length - 1;
-      S.reviewTo = isMgr() ? 'final' : 'teamfinal';
-      go('review');
+      // Straight to the ending. This used to replay the whole of 2027 -
+      // review, performance, leaderboard - all of which the room read when the
+      // year resolved, and the leaderboard then handed over a podium that had
+      // just finished walking.
+      go('final');
     } else if (stillSetting) { save(); paint(); }
     else if (st.stage === 'running' && S.screen !== 'running' && !BUSY.includes(S.screen)) {
       S.year = st.year; go('running');
@@ -2027,6 +2010,10 @@ function publishMe(){
     // The whole run, for the instructor's export. Only the manager holds a
     // fund object, so only she has one to send.
     history: S.role === 'manager' ? runHistory() : [],
+    // The analysts' ending and their decomposition are rendered from this.
+    // Only the manager holds a fund object, so the summary has to travel.
+    summary: (S.role === 'manager' && S.fund) ? runSummary() : null,
+    flows: (S.role === 'manager' && S.lastResult) ? S.lastResult.flows : null,
     crisisLog: S.crisisLog || [],
     switches: S.switches || 0 });
   save();

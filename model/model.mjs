@@ -7,8 +7,8 @@
 // problems findable before a class saw them.
 // =============================================================================
 
-import { UNIVERSE, ACTIVITIES } from '../data/universe.mjs?v=11051038';
-import { INDEX, YEARS, COMPRESSION, ENDINGS } from '../data/world.mjs?v=11051038';
+import { UNIVERSE, ACTIVITIES } from '../data/universe.mjs?v=11051207';
+import { INDEX, YEARS, COMPRESSION, ENDINGS } from '../data/world.mjs?v=11051207';
 
 // ---------------------------------------------------------------- constants --
 export const START_AUM   = 500;              // EUR m
@@ -219,7 +219,7 @@ export function playYear(fund, t, { peerFee = FEE_START, ending = null } = {}) {
   // fund unsellable. Without the convexity the optimum sits at the top of the
   // range and the pricing decision has a dominant answer.
   const feeGapRaw = (fund.fee - peerFee) * 100;
-  const feeGap    = feeGapRaw > 0 ? feeGapRaw * (1 + 0.9 * feeGapRaw)
+  const feeGap    = feeGapRaw > 0 ? feeGapRaw * (1 + 2.5 * feeGapRaw)
                                   : feeGapRaw * 0.6;
   // effective number of positions, 1/HHI
   const wts  = Object.values(weightsOf(fund.holdings));

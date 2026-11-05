@@ -1,16 +1,16 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-05 13:06 UTC
+// Peak ESG — the client   ·   published 2026-11-05 13:21 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11051306';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11051306';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11051306';
-import { NEWS, newsFor } from './data/news.mjs?v=11051306';
-import { EPS, dossierAt } from './data/evolve.mjs?v=11051306';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11051306';
-import { makeNet } from './net.mjs?v=11051306';
+import * as M from './model/model.mjs?v=11051321';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11051321';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11051321';
+import { NEWS, newsFor } from './data/news.mjs?v=11051321';
+import { EPS, dossierAt } from './data/evolve.mjs?v=11051321';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11051321';
+import { makeNet } from './net.mjs?v=11051321';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -864,8 +864,7 @@ SCREENS.fee = {
     return `<h1>What do you charge?</h1>
       <p class="lede">The fee is the percentage investors pay you each year for managing
         their money, and <b>the total over the six years is your result</b>. Charge more and
-        you earn more per euro, but a dear fund has to be worth it. Other funds are opening
-        at about 0.80%.</p>
+        you earn more per euro, but a dear fund has to be worth it. The market rate is 0.80%.</p>
       <div class="big">${pct(f)}</div>
       <input type="range" id="r" min="10" max="200" step="5" value="${Math.round(f*10000)}">
       <div class="small" style="display:flex;justify-content:space-between"><span>0.10%</span><span>2.00%</span></div>
@@ -877,7 +876,7 @@ SCREENS.fee = {
     m.querySelector('#b').onclick=()=>go('threshold');
     m.querySelector('#n').onclick=()=>{
       S.fund=M.newFund({policy:S.policy,fee:S.fee});
-      botSay('Chief Operating Officer',Hey()+'we are open at <b>'+pct(S.fee)+'</b> a year. Keep an eye on what the other funds charge — the market rate moves, and being dearer than it costs us money.',2022);
+      botSay('Chief Operating Officer',Hey()+'we are open at <b>'+pct(S.fee)+'</b> a year. The market charges 0.80%, and being dearer than that costs us money every year.',2022);
       publishMe(); go('allocate'); }; }
 };
 
@@ -1501,7 +1500,7 @@ SCREENS.decide = {
         read this year\u2019s news.</p>
 
       <h2>1 \u00b7 The fee</h2>
-      <p class="small">What investors pay you each year. <b>Your rivals are charging about
+      <p class="small">What investors pay you each year. <b>The market rate is
         ${pct(S.peerFee)}.</b></p>
       <div class="big">${pct(S.fee)}</div>
       <input type="range" id="r" min="10" max="200" step="5" value="${Math.round(S.fee*10000)}">

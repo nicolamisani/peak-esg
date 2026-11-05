@@ -1,16 +1,16 @@
 // =============================================================================
-// Peak ESG — the client   ·   published 2026-11-05 13:21 UTC
+// Peak ESG — the client   ·   published 2026-11-05 17:56 UTC
 // =============================================================================
 // One screen, one kind of information, with a visible sense of where you are.
 // Everything numeric comes from model/model.mjs; nothing is decided here.
 // =============================================================================
-import * as M from './model/model.mjs?v=11051321';
-import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11051321';
-import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11051321';
-import { NEWS, newsFor } from './data/news.mjs?v=11051321';
-import { EPS, dossierAt } from './data/evolve.mjs?v=11051321';
-import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11051321';
-import { makeNet } from './net.mjs?v=11051321';
+import * as M from './model/model.mjs?v=11051756';
+import { UNIVERSE, ACTIVITIES } from './data/universe.mjs?v=11051756';
+import { INDEX, YEARS, REVIEW, SCENARIO, ENDINGS } from './data/world.mjs?v=11051756';
+import { NEWS, newsFor } from './data/news.mjs?v=11051756';
+import { EPS, dossierAt } from './data/evolve.mjs?v=11051756';
+import { ROLES, DESKS, SEATS, MAX_ANALYSTS, deskFor } from './roles.mjs?v=11051756';
+import { makeNet } from './net.mjs?v=11051756';
 
 // ------------------------------------------------------------------ state ---
 const S = {
@@ -615,9 +615,10 @@ SCREENS.desk = {
     const yr = playing ? YEARS[t] : 2021;
     return `<h1>Your desk</h1>
       <p class="task">Tap a company to open its dossier. The score is one rating agency's opinion.</p>
+      ${policyStrip()}
       ${playing ? `<div class="colhead"><span class="c2">${yr} return</span><span class="c1">ESG score</span></div>`
                 : `<div class="colhead"><span class="c1">ESG score</span></div>`}
-      ${ids.map(id=>{ const c=co(id); const f=S.flags[id];
+      ${ids.map(id=>{ const c=co(id); const f=S.flags[id]; const bad=failsPolicy(c);
         // The score moves with events, so showing the 2021 number all game
         // would hide the one thing an analyst is meant to be watching.
         const sc = playing ? c.esg[t] : c.esg0;
@@ -631,6 +632,7 @@ SCREENS.desk = {
           <div><div class="nm">${esc(c.name)}</div>
           <div class="ind">${esc(c.industry)} · ${esc(c.region)}${
             r===null?'':` · <span class="${r>=0?'up':'down'}">${pc(r,0)} in ${yr}</span>`}</div>
+          ${bad?`<div class="outside">Outside the fund\u2019s policy</div>`:''}
           ${f?REC:''}</div>
           <span class="score ${sc>=70?'hi':sc<50?'lo':''}">${sc}${
             d ? `<small>${d>0?'+':'−'}${Math.abs(d)}</small>` : ''}</span></div>`; }).join('')}
@@ -644,6 +646,28 @@ SCREENS.desk = {
     S.openCo=r.dataset.id; S.openSect='prof'; go('dossier'); });
     const b=m.querySelector('#back'); if(b) b.onclick=()=>go('standby'); }
 };
+
+// An analyst could not see the fund's own policy, so her advice was general
+// when it could have been specific. "A good company" is worth less to a
+// manager than "a good company your own screen throws out". The policy now
+// travels with the roster and sits at the top of the desk.
+function policyStrip(){
+  const p = (S.roster && S.roster.policy) || S.policy;
+  if (!p || !p.strategy) return '';
+  const thr = p.strategy === 'exclude' ? (p.excluded || []).join(', ')
+            : p.strategy === 'best'    ? `top ${p.rank} in each industry`
+            : `minimum score ${p.minScore}`;
+  const txt = (S.roster && S.roster.policyText) || S.policyText || '';
+  return `<div class="policystrip">
+    <div class="psh">The fund screens for</div>
+    <div class="psb"><b>${esc(STRAT_NAME[p.strategy] || p.strategy)}</b> \u2014 ${esc(thr)}</div>
+    ${txt ? `<div class="psq">${esc(txt)}</div>` : ''}</div>`;
+}
+// Does this company pass the fund's own stated policy?
+function failsPolicy(c){
+  const p = (S.roster && S.roster.policy) || S.policy;
+  return p && p.strategy ? !M.admits(p, c) : false;
+}
 
 const SECTIONS = [
   ['prof','Profile'], ['fin','Financial'], ['esg','ESG'], ['pol','Policies'],
@@ -922,7 +946,7 @@ SCREENS.allocate = {
       if (!st || st.stage === 'setup') {
         S.readyYear = 0; S.yearStart = { ...S.holdings };
       }
-      publishMe();
+      publishNowFlush();
       if (st && (st.stage === 'decide' || st.stage === 'running')) {
         S.year = st.year || 0; S.trades = 0; go(st.stage === 'running' ? 'running' : 'decide'); }
       else go('open');
@@ -1485,6 +1509,51 @@ function budget(){
   return { adds:  Object.keys(S.holdings).filter(id => !st[id]).length,
            drops: Object.keys(st).filter(id => !S.holdings[id]).length };
 }
+// THE CLOCK, rebuilt. The first version never ticked because nothing redrew
+// it, and it expired without consequence. This one updates its own text once a
+// second WITHOUT a repaint - a full render during the decide beat is what left
+// the COO bar stuck in Safari - and at zero it locks the team, exactly as if
+// they had pressed done.
+function clockLeft(){
+  const ends = S.clockEnds;
+  if (!ends || S.clockYear !== S.year) return null;
+  return Math.max(0, Math.round((ends - Date.now()) / 1000));
+}
+const mmss = t => `${Math.floor(t/60)}:${String(t%60).padStart(2,'0')}`;
+function clockBox(){
+  const t = clockLeft();
+  if (t === null) return '';
+  const said = S.readyYear === S.year;
+  if (said) return '';
+  return `<div class="clock${t <= 30 ? ' urgent' : ''}" id="clock">
+    <div class="ct" id="ct">${mmss(t)}</div>
+    <div class="cl">left to decide. When it reaches zero your fund locks with
+      whatever you are holding then.</div></div>`;
+}
+let clockTimer = null;
+function startClockTick(){
+  clearInterval(clockTimer); clockTimer = null;
+  if (clockLeft() === null) return;
+  clockTimer = setInterval(() => {
+    const t = clockLeft();
+    if (t === null) { clearInterval(clockTimer); clockTimer = null; return; }
+    const el = document.getElementById('ct');
+    // Write the text directly. Repainting once a second would fight the
+    // keyboard and re-run every handler on the screen.
+    if (el) { el.textContent = mmss(t);
+              const box = document.getElementById('clock');
+              if (box) box.classList.toggle('urgent', t <= 30); }
+    if (t === 0) {
+      clearInterval(clockTimer); clockTimer = null;
+      // Lock, the same way the button does. Their portfolio as it stands is
+      // what they would have committed anyway.
+      if (S.screen === 'decide' && S.readyYear !== S.year) {
+        S.readyYear = S.year; publishNowFlush(); paint();
+      }
+    }
+  }, 1000);
+}
+
 SCREENS.decide = {
   html(){
     const n = Object.keys(S.holdings).length;
@@ -1503,14 +1572,26 @@ SCREENS.decide = {
       <p class="small">What investors pay you each year. <b>The market rate is
         ${pct(S.peerFee)}.</b></p>
       <div class="big">${pct(S.fee)}</div>
+      <p class="small feeline">On ${eur(M.totalAUM(S.fund))} that is
+        <b>${eur(M.totalAUM(S.fund) * S.fee)} a year</b>${
+        Math.abs(S.fee - S.peerFee) < 0.00005 ? ', exactly the market rate.'
+        : S.fee > S.peerFee ? `, and ${pct(S.fee - S.peerFee)} above the market rate.
+            Investors can see that, and the gap costs more the wider it gets.`
+        : `, and ${pct(S.peerFee - S.fee)} below the market rate.`}</p>
       <input type="range" id="r" min="10" max="200" step="5" value="${Math.round(S.fee*10000)}">
 
       ${S.year >= 5 ? '' : `<h2>2 \u00b7 The ESG strategy</h2>
       <div class="note warn"><span class="risky">\u26a0</span>
         <b>Currently: ${esc(STRAT_NAME[S.policy.strategy] || 'your policy')}.</b>
         ${S.switches ? `You have changed this ${S.switches === 1 ? 'once' : S.switches + ' times'} already. ` : ''}
-        Changing it is the one expensive move here. Some investors leave at once, and the
-        ones who care most trust you less afterwards.
+        Changing it is the one expensive move here. It costs:
+        <ul class="costs">
+          <li><b>${eur(M.totalAUM(S.fund) * M.SWITCH_CUT)}</b> leaves the fund at once
+            — ${pct(M.SWITCH_CUT)} of what you manage today.</li>
+          <li>The investors who care most trust you less <b>from now on</b>, and more so
+            each time${S.switches ? `, which has already happened ${S.switches === 1
+              ? 'once' : S.switches + ' times'}` : ''}.</li>
+        </ul>
         <div class="actions" style="margin-top:10px">
           <button class="ghost" id="switch">Change the ESG strategy</button></div>
       </div>`}
@@ -1544,6 +1625,7 @@ SCREENS.decide = {
         ${breach.length === 1 ? 'it' : 'them'}; investors will notice the difference between what
         you promised and what you own.</div>` : ''}
 
+      ${clockBox()}
       ${n >= M.MIN_HOLDINGS && !said ? `<div class="actions">
         <button id="ready" class="wide">We are done \u2014 this locks ${YEARS[S.year]}</button></div>` : ''}
       <div class="waitbox"><b>${said
@@ -1554,8 +1636,9 @@ SCREENS.decide = {
           : 'Everything here can still be changed until you press the button above.'}</div></div>`;
   },
   wire(m){
+    startClockTick();                     // the box is freshly in the DOM
     const rdy = m.querySelector('#ready');
-    if (rdy) rdy.onclick = () => { S.readyYear = S.year; publishMe(); paint(); };
+    if (rdy) rdy.onclick = () => { S.readyYear = S.year; publishNowFlush(); paint(); };
     // DONE IS DONE. Once a team has committed, the instructor must be able to
     // trust the dot: nothing below can move until the year runs. Everything
     // stays on screen so they can see what they committed to, but nothing is
@@ -1676,7 +1759,7 @@ SCREENS.crisis = {
       S.crisisLog = [...(S.crisisLog||[]), { year:YEARS[S.year], company:c.name,
         event:ev.note, weight, outside:!M.admits(S.policy,c), answered:!!text,
         words: text ? text.split(/\s+/).filter(Boolean).length : 0 }];
-      publishMe();
+      publishNowFlush();
       const done = () => { resolveYear(); S.reviewYear = S.year; S.reviewTo = null; go('review'); };
       if (!text) { done(); return; }
       // Offline there is no assessor, so score it by rule: a specific answer of
@@ -1893,6 +1976,11 @@ function connect(){
     const stageChanged = st.stage !== prevStage || st.year !== prevYear;
     S.peerFee = S.net.peerFee(M.FEE_START);
     S.podiumStep = st.podiumStep || 0;
+    // The clock. It is on the session document, so it arrives whole.
+    const clockWas = S.clockEnds;
+    S.clockEnds = st.clockEnds || null;
+    S.clockYear = st.clockYear == null ? null : st.clockYear;
+    if (S.clockEnds !== clockWas) { startClockTick(); }
     // what the assessor made of the prose
     const mine = st.mine || {};
     S.board = st.board || S.board || [];
@@ -1991,7 +2079,24 @@ function connect(){
     else if (S.screen === 'team') { paint(); }
   });
 }
+// Every tap used to be a Firestore write. Eleven funds on four devices each,
+// six years, and a day of testing exhausted the free tier's 20,000 writes a
+// day MID-CLASS - the worker's own writes then hung, the panel said the year
+// was running while no device had heard, and the log went quiet because it
+// prints after the await. Coalesce instead: the last state within the window
+// is the one that matters, and nobody can see the difference.
+let pubTimer = null, pubPending = false;
+const PUBLISH_QUIET_MS = 1200;
 function publishMe(){
+  if (!S.net) return;
+  pubPending = true;
+  clearTimeout(pubTimer);
+  pubTimer = setTimeout(() => { pubPending = false; publishNow(); }, PUBLISH_QUIET_MS);
+}
+// Some moments must not wait: committing a year, answering a scandal, opening
+// the fund. The instructor is watching the dot.
+function publishNowFlush(){ clearTimeout(pubTimer); pubPending = false; publishNow(); }
+function publishNow(){
   if (!S.net) return;
   S.net.publish(S.role + '_' + (S.fundName||'g'), {
     role:S.role, name:S.fundName, teamId:S.teamId, joinedAt:S.joinedAt||null,
